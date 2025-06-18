@@ -107,22 +107,21 @@ graph TD
 
 ## Component Flow
 
-```plantuml
-@startuml
-actor User
+```mermaid
+sequenceDiagram
+    actor User
 
-User -> WebUI : Uses Web Interface
-WebUI -> APIServer : Search/Edit/Upload Requests
+    User ->> WebUI: Uses Web Interface
+    WebUI ->> APIServer: Search / Edit / Upload requests
 
-APIServer -> Typesense : Query files (fuzzy tag/filename search)
-APIServer -> MetadataDB : Fetch/edit file metadata
-APIServer -> FileUploader : Upload new file with tags
-FileUploader -> FileStorage : Save file at derived path
+    APIServer ->> Typesense: Query files (fuzzy tag / filename search)
+    APIServer ->> MetadataDB: Fetch / edit file metadata
+    APIServer ->> FileUploader: Upload new file with tags
+    FileUploader ->> FileStorage: Save file at derived path
 
-FileScanner -> FileStorage : Scans folders
-FileScanner -> MetadataDB : Insert/Update file metadata
-FileScanner -> Typesense : Upsert metadata index
-@enduml
+    FileScanner ->> FileStorage: Scan folders
+    FileScanner ->> MetadataDB: Insert / update file metadata
+    FileScanner ->> Typesense: Upsert metadata index
 ```
 
 ## Tradeoffs
