@@ -34,13 +34,15 @@ The system must address the following requirements based on the MoSCoW prioritiz
 - Bulk tag editing or tag templates
 - Role-based permission levels
 - Plugin-based rule system to extend tagging logic
+- Preview or visualization of complex files (e.g., CSV plotting, image viewers)
 - Allow uploading files with manual tag input and intelligent path placement based on tags
+- Text based search (for text containing files such as `.docx`, `.pdf`)
 
 ## Won't Have (for MVP)
 
 - AI/ML-based tag inference
 - Real-time collaboration features
-- Full preview or visualization of complex files (e.g., CSV plotting, image viewers)
+
 
 # Method
 
@@ -50,32 +52,32 @@ The system must address the following requirements based on the MoSCoW prioritiz
 graph TD
   A[User] --> B[Web Frontend]
   B --> C[API Server]
-  C --> D[Metadata DB (PostgreSQL)]
-  C --> E[Search Index (Typesense)]
+  C --> D[MetadataDB]
+  C --> E[Search Index]
   C --> F[File Scanner Service]
   C --> G[File Uploader]
   F --> D
   F --> E
-  F --> H[File Storage (Network Drive)]
+  F --> H[File Storage]
   G --> H
 ```
 
 ## Database Schema (PostgreSQL)
 
-|##
-|Field | Description | Type
 
-|id | Unique identifier | UUID
-|filename | Name of the file | TEXT
-|path | Full absolute file path | TEXT
-|directory | Containing folder | TEXT
-|file_type | mime-type or extension (e.g., `image/png`, `csv`) | TEXT
-|tags | JSON array of tags | JSONB
-|created_at | Original file creation date | TIMESTAMP
-|updated_at | Last modified date on disk | TIMESTAMP
-|deleted_at | Null unless deleted | TIMESTAMP (nullable)
-|last_indexed_at | Last time it was scanned/indexed | TIMESTAMP
-|##
+| Field | Description | Type |
+| ----- | ----------- | ---- |
+| id | Unique identifier | UUID |
+| filename | Name of the file | TEXT |
+| path | Full absolute file path | TEXT |
+| directory | Containing folder | TEXT |
+| file_type | mime-type or extension (e.g., `image/png`, `csv`) | TEXT |
+| tags | JSON array of tags | JSONB |
+| created_at | Original file creation date | TIMESTAMP |
+| updated_at | Last modified date on disk | TIMESTAMP |
+| deleted_at | Null unless deleted | TIMESTAMP (nullable) |
+| last_indexed_at | Last time it was scanned/indexed | TIMESTAMP |
+
 
 ## Typesense Schema (Fuzzy Search)
 
