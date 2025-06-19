@@ -6,6 +6,7 @@ export default defineConfig({
     include: ['**/*.spec.ts'],
     globals: true,
     root: './',
+    setupFiles: ['./src/test-setup.ts'],
   },
   plugins: [swc.vite()],
 });
