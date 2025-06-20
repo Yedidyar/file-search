@@ -9,11 +9,15 @@
       "executor": "nx:run-commands",
       "options": {
         "command": "webpack-cli build",
-        "args": ["node-env=production"]
+        "args": [
+          "node-env=production"
+        ]
       },
       "configurations": {
         "development": {
-          "args": ["node-env=development"]
+          "args": [
+            "node-env=development"
+          ]
         }
       }
     },
@@ -21,7 +25,9 @@
       "continuous": true,
       "executor": "@nx/js:node",
       "defaultConfiguration": "development",
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "options": {
         "buildTarget": "server:build",
         "runBuildTargetDependencies": false
@@ -33,6 +39,18 @@
         "production": {
           "buildTarget": "server:build:production"
         }
+      }
+    },
+    "generate-migrations": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx drizzle-kit generate --config=drizzle.config.ts"
+      }
+    },
+    "migrate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx drizzle-kit migrate --config=drizzle.config.ts"
       }
     }
   }
