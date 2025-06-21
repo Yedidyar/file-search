@@ -64,19 +64,26 @@ graph TD
 
 ## Database Schema (PostgreSQL)
 
+### Files table
 
 | Field | Description | Type |
 | ----- | ----------- | ---- |
 | id | Unique identifier | UUID |
 | filename | Name of the file | TEXT |
 | path | Full absolute file path | TEXT |
-| directory | Containing folder | TEXT |
 | file_type | mime-type or extension (e.g., `image/png`, `csv`) | TEXT |
-| tags | JSON array of tags | JSONB |
 | created_at | Original file creation date | TIMESTAMP |
 | updated_at | Last modified date on disk | TIMESTAMP |
 | deleted_at | Null unless deleted | TIMESTAMP (nullable) |
 | last_indexed_at | Last time it was scanned/indexed | TIMESTAMP |
+
+### Tags table
+
+Field | Description | Type
+-- | -- | --
+id | Unique tag ID | UUID
+file_id | Foreign key to files.id; represents the file being tagged | UUID
+name | Tag name | TEXT
 
 
 ## Typesense Schema (Fuzzy Search)
