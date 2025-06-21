@@ -93,7 +93,6 @@ Field            | Description                                                  
 -----------------|--------------------------------------------------------------|-------------
 id               | Unique tag ID                                                | UUID
 path_glob        | Glob of the path(s) to scan                                  | TEXT
-ignore_patterns  | Array of glob patterns to ignore within each path            | TEXT[]
 created_at       | When this scan job was created                               | TIMESTAMPTZ
 updated_at       | When any field of this row was last updated                  | TIMESTAMPTZ
 last_scanned_at  | Timestamp of the most recent scan attempt                    | TIMESTAMPTZ
