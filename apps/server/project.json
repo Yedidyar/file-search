@@ -34,6 +34,18 @@
           "buildTarget": "server:build:production"
         }
       }
+    },
+    "generate-migrations": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "drizzle-kit generate --config=apps/server/drizzle.config.ts"
+      }
+    },
+    "migrate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "drizzle-kit migrate --config=apps/server/drizzle.config.ts"
+      }
     }
   }
 }

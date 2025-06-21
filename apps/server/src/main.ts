@@ -6,15 +6,7 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
-import z from 'zod';
-
-const envSchema = z.object({
-  PORT: z.coerce.number(),
-});
-
-export const env = envSchema.parse(process.env) as Readonly<
-  z.infer<typeof envSchema>
->;
+import { env } from './env';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
