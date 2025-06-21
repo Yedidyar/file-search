@@ -38,13 +38,13 @@
     "generate-migrations": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "drizzle-kit generate --config=drizzle.config.ts"
+        "command": "drizzle-kit generate --config=apps/server/drizzle.config.ts"
       }
     },
     "migrate": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "drizzle-kit migrate --config=drizzle.config.ts"
+        "command": "drizzle-kit migrate --config=apps/server/drizzle.config.ts"
       }
     }
   }
