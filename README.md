@@ -86,6 +86,35 @@ file_id | Foreign key to files.id; represents the file being tagged | UUID
 name | Tag name | TEXT
 
 
+
+### Scan Paths table
+
+Field            | Description                                                  | Type
+-----------------|--------------------------------------------------------------|-------------
+id               | Unique tag ID                                                | UUID
+path_glob        | Glob of the path(s) to scan                                  | TEXT
+ignore_patterns  | Array of glob patterns to ignore within each path            | TEXT[]
+created_at       | When this scan job was created                               | TIMESTAMPTZ
+updated_at       | When any field of this row was last updated                  | TIMESTAMPTZ
+last_scanned_at  | Timestamp of the most recent scan attempt                    | TIMESTAMPTZ
+next_scan_at     | Scheduled time for the next scan                             | TIMESTAMPTZ
+last_status      | Result of the last scan (`success`, `error`, `skipped`)      | TEXT
+last_error_message | Error message from last failed scan                       | TEXT
+failure_count    | Number of consecutive failures                               | INT
+scan_interval    | How often to re-scan (e.g. `'1 hour'`, `'24 hours'`)         | INTERVAL
+priority         | Scan priority (higher = sooner)                              | SMALLINT
+
+
+### Scan Path Ignores table
+
+Field         | Description                                         | Type
+--------------|-----------------------------------------------------|-------------
+scan_path_id  | FK to `scan_paths.id`                               | UUID
+pattern       | Single glob pattern to exclude from the scan        | TEXT
+
+
+---
+
 ## Typesense Schema (Fuzzy Search)
 
 ```json
