@@ -10,6 +10,7 @@
     "@nestjs/platform-express": "^11.0.0",
     "@react-router/node": "^7.6.2",
     "@react-router/serve": "^7.6.2",
+    "@t3-oss/env-core": "^0.13.8",
     "axios": "^1.6.0",
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.44.2",
