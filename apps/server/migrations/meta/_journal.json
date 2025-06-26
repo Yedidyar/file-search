@@ -15,6 +15,13 @@
       "when": 1750500351965,
       "tag": "0001_noisy_vargas",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1750956226839,
+      "tag": "0002_freezing_hulk",
+      "breakpoints": true
     }
   ]
 }
