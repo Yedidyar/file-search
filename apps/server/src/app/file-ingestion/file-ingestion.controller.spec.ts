@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { FileIngestionController } from './file-ingestion.controller';
-import { FileIngestionService } from '../services/file-ingestion.service';
+import { FileIngestionService } from './file-ingestion.service';
 
 describe('FileIngestionController', () => {
   let controller: FileIngestionController;

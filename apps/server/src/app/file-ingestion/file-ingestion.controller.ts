@@ -6,8 +6,8 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { FileIngestionService } from '../services/file-ingestion.service';
-import { IngestFilesSchema } from '../dto/file-metadata.dto';
+import { FileIngestionService } from './file-ingestion.service';
+import { IngestFilesSchema } from './file-metadata.dto';
 
 @Controller('files')
 export class FileIngestionController {

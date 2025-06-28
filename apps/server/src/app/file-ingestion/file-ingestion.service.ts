@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { db } from '../../db';
 import { files, tags } from '../../db/schema';
 import { eq, inArray } from 'drizzle-orm';
-import { FileMetadata } from '../dto/file-metadata.dto';
+import { FileMetadata } from './file-metadata.dto';
 
 @Injectable()
 export class FileIngestionService {
