@@ -4,7 +4,6 @@ import * as schema from '../db/schema';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { beforeAll, afterAll, beforeEach } from 'vitest';
 import path from 'node:path';
-import { sql } from 'drizzle-orm';
 
 // Test database configuration
 const TEST_DATABASE_URL =
