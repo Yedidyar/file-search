@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { files, tags } from '../../db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, SQL, sql } from 'drizzle-orm';
 import { FileMetadata } from './file-metadata.dto';
 import { DATABASE_PROVIDER } from '../../db/database.provider';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
@@ -38,17 +38,26 @@ export class FileIngestionService {
           : new Date(),
       }));
 
+      const setObject = Object.keys(fileValues[0]).reduce(
+        (acc, key) => {
+          // Convert camelCase keys to snake_case for database compatibility,
+          // this is specially necessary if you have relationships
+          const columnName = key.replace(
+            /[A-Z]/g,
+            (letter) => `_${letter.toLowerCase()}`,
+          );
+          acc[columnName] = sql.raw(`excluded."${columnName}"`);
+          return acc;
+        },
+        {} as Record<string, SQL>,
+      );
+
       const upsertedFiles = await tx
         .insert(files)
         .values(fileValues)
         .onConflictDoUpdate({
           target: files.path,
-          set: {
-            filename: files.filename,
-            fileType: files.fileType,
-            updatedAt: files.updatedAt,
-            lastIndexedAt: files.lastIndexedAt,
-          },
+          set: setObject,
         })
         .returning();
 

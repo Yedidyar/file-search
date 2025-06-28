@@ -2,60 +2,65 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from '../db/schema';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { beforeAll, afterAll, beforeEach } from 'vitest';
+import dockerCompose from 'docker-compose';
 import path from 'node:path';
+import isPortReachable from 'is-port-reachable';
+import { TEST_DATABASE_URL } from './test-db';
 
-// Test database configuration
-const TEST_DATABASE_URL =
-  process.env.TEST_DATABASE_URL ||
-  'postgresql://postgres:postgres@localhost:5433/file_search_test';
+export const setup = async () => {
+  console.time('global-setup');
 
-let testPool: Pool;
-let testDb: ReturnType<typeof drizzle>;
+  const isDBReachable = await isPortReachable(5433, { host: '127.0.0.1' });
 
-export const getTestDb = () => testDb;
+  if (!isDBReachable) {
+    await dockerCompose.upAll({
+      cwd: path.resolve(__dirname),
+      log: true,
+    });
+  }
 
-export const setupTestDatabase = async () => {
+  await dockerCompose.exec(
+    'postgres-test',
+    ['sh', '-c', 'until pg_isready ; do sleep 1; done'],
+    {
+      cwd: path.join(__dirname),
+    },
+  );
+
   // Create a new pool for testing
-  testPool = new Pool({
+  const testPool = new Pool({
     connectionString: TEST_DATABASE_URL,
   });
 
   // Create drizzle instance
-  testDb = drizzle(testPool, { schema });
+  const testDb = drizzle(testPool, { schema });
 
   await migrate(testDb, {
     migrationsFolder: path.resolve(__dirname, '../../migrations'),
   });
+
+  console.timeEnd('global-setup');
+
+  return async () => {
+    console.time('global-cleanup');
+
+    if (process.env.CI) {
+      // ️️️✅ Best Practice: Leave the DB up in dev environment
+      await dockerCompose.down();
+    } else {
+      // ✅ Best Practice: Clean the database occasionally
+      if (Math.ceil(Math.random() * 10) === 10) {
+        await testDb.delete(schema.scanPathIgnores);
+        await testDb.delete(schema.tags);
+        await testDb.delete(schema.scanPaths);
+        await testDb.delete(schema.files);
+      }
+    }
+
+    if (testPool) {
+      await testPool.end();
+    }
+
+    console.timeEnd('global-cleanup');
+  };
 };
-
-export const cleanupTestDatabase = async () => {
-  if (testPool) {
-    await testPool.end();
-  }
-};
-
-export const clearTestDatabase = async () => {
-  if (testDb) {
-    // Clear all tables in reverse order of dependencies
-    await testDb.delete(schema.scanPathIgnores);
-    await testDb.delete(schema.tags);
-    await testDb.delete(schema.scanPaths);
-    await testDb.delete(schema.files);
-  }
-};
-
-// Global test setup
-beforeAll(async () => {
-  await setupTestDatabase();
-});
-
-// Global test cleanup
-afterAll(async () => {
-  await cleanupTestDatabase();
-});
-
-// Clear database before each test
-beforeEach(async () => {
-  await clearTestDatabase();
-});

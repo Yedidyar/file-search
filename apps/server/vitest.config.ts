@@ -6,6 +6,9 @@ export default defineConfig({
   test: {
     globals: true,
     root: './',
+    globalSetup: ['./src/test/setup.ts'],
+    environment: 'node',
+    testTimeout: 30000, // 30 seconds for database operations
   },
   plugins: [
     // This is required to build the test files with SWC
