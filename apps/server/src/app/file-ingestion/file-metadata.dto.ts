@@ -62,6 +62,7 @@ export const ErrorResponseSchema = z.object({
   timestamp: z.string().describe('Timestamp when the error occurred'),
 });
 
+export class FileMetadataDto extends createZodDto(FileMetadataSchema) {}
 export class IngestFilesDto extends createZodDto(IngestFilesSchema) {}
 export class FileRecordDto extends createZodDto(FileRecordSchema) {}
 export class IngestResponseDto extends createZodDto(IngestResponseSchema) {}

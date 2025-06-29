@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { files, tags } from '../../db/schema';
 import { eq, inArray, SQL, sql } from 'drizzle-orm';
-import { FileMetadata } from './file-metadata.dto';
+import { FileMetadataDto } from './file-metadata.dto';
 import { DATABASE_PROVIDER } from '../../db/database.provider';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type * as schema from '../../db/schema';
@@ -13,7 +13,7 @@ export class FileIngestionService {
     private readonly db: NodePgDatabase<typeof schema>,
   ) {}
 
-  async ingestFiles(fileMetadataList: FileMetadata[]) {
+  async ingestFiles(fileMetadataList: FileMetadataDto[]) {
     if (fileMetadataList.length === 0) {
       return [];
     }
