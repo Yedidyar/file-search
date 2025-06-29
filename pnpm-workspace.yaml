@@ -1,6 +1,7 @@
 onlyBuiltDependencies:
   - '@nestjs/core'
   - '@parcel/watcher'
+  - '@scarf/scarf'
   - '@swc/core'
   - esbuild
   - nx

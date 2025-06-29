@@ -10,5 +10,4 @@ const testPool = new Pool({
   connectionString: TEST_DATABASE_URL,
 });
 
-// Create drizzle instance
 export const testDb = drizzle(testPool, { schema });

@@ -6,16 +6,21 @@ import { FileIngestionController } from './file-ingestion.controller';
 import { FileIngestionService } from './file-ingestion.service';
 import { DATABASE_PROVIDER } from '../../db/database.provider';
 import { testDb } from '../../test/test-db';
-import { FileMetadata } from './file-metadata.dto';
+import {
+  FileRecordDto,
+  IngestResponseDto,
+  GetFilesResponseDto,
+  ErrorResponseDto,
+} from './file-metadata.dto';
 import { ZodExceptionFilter } from '../../common/filters/zod-exception.filter';
 
 const createTestFileMetadata = (
-  overrides: Partial<FileMetadata> = {},
-): FileMetadata => ({
+  overrides: Partial<FileRecordDto> = {},
+): Partial<FileRecordDto> => ({
   filename: 'test-file.txt',
   fileType: 'text/plain',
   path: '/test/path/test-file.txt',
-  lastIndexedAt: new Date().toISOString(),
+  lastIndexedAt: new Date(),
   tags: ['test', 'example'],
   ...overrides,
 });
@@ -59,7 +64,8 @@ describe('FileIngestionController (e2e)', () => {
         .send({ files: [fileMetadata] })
         .expect(200);
 
-      expect(response.body).toMatchObject({
+      const ingestResponse = response.body as IngestResponseDto;
+      expect(ingestResponse).toMatchObject({
         message: 'File ingestion completed',
         summary: {
           total: 1,
@@ -68,16 +74,18 @@ describe('FileIngestionController (e2e)', () => {
         },
       });
 
-      // Verify the file was actually saved to the database
-      // We need to get the files to find the one we just created
       const filesResponse = await request(app.getHttpServer())
         .get('/files')
         .expect(200);
 
-      const savedFile = filesResponse.body.files.find(
-        (f: any) => f.path === '/documents/test-document.pdf',
+      const getFilesResponse = filesResponse.body as GetFilesResponseDto;
+      const savedFile = getFilesResponse.files.find(
+        (f) => f.path === '/documents/test-document.pdf',
       );
-      savedFile.tags = savedFile.tags.sort();
+
+      if (savedFile) {
+        savedFile.tags = savedFile.tags.sort();
+      }
 
       expect(savedFile).toMatchObject({
         filename: 'test-document.pdf',
@@ -113,7 +121,8 @@ describe('FileIngestionController (e2e)', () => {
         .send({ files: fileMetadataList })
         .expect(200);
 
-      expect(response.body).toMatchObject({
+      const ingestResponse = response.body as IngestResponseDto;
+      expect(ingestResponse).toMatchObject({
         message: 'File ingestion completed',
         summary: {
           total: 3,
@@ -122,13 +131,13 @@ describe('FileIngestionController (e2e)', () => {
         },
       });
 
-      // Verify all files were saved
       const filesResponse = await request(app.getHttpServer())
         .get('/files')
         .expect(200);
 
-      const paths = filesResponse.body.files
-        .map((f: any) => f.path)
+      const getFilesResponse = filesResponse.body as GetFilesResponseDto;
+      const paths = getFilesResponse.files
+        .map((f) => f.path)
         .filter((path: string) =>
           [
             '/files/file1.txt',
@@ -157,14 +166,16 @@ describe('FileIngestionController (e2e)', () => {
         .send({ files: [fileMetadata] })
         .expect(200);
 
-      expect(response.body.summary.successful).toBe(1);
+      const ingestResponse = response.body as IngestResponseDto;
+      expect(ingestResponse.summary.successful).toBe(1);
 
       const filesResponse = await request(app.getHttpServer())
         .get('/files')
         .expect(200);
 
-      const savedFile = filesResponse.body.files.find(
-        (f: any) => f.path === '/files/no-tags.txt',
+      const getFilesResponse = filesResponse.body as GetFilesResponseDto;
+      const savedFile = getFilesResponse.files.find(
+        (f) => f.path === '/files/no-tags.txt',
       );
 
       expect(savedFile?.tags).toEqual([]);
@@ -176,7 +187,8 @@ describe('FileIngestionController (e2e)', () => {
         .send({ files: [] })
         .expect(200);
 
-      expect(response.body).toMatchObject({
+      const ingestResponse = response.body as IngestResponseDto;
+      expect(ingestResponse).toMatchObject({
         message: 'File ingestion completed',
         summary: {
           total: 0,
@@ -211,14 +223,16 @@ describe('FileIngestionController (e2e)', () => {
         .send({ files: [updatedFile] })
         .expect(200);
 
-      expect(response.body.summary.successful).toBe(1);
+      const ingestResponse = response.body as IngestResponseDto;
+      expect(ingestResponse.summary.successful).toBe(1);
 
       const filesResponse = await request(app.getHttpServer())
         .get('/files')
         .expect(200);
 
-      const savedFile = filesResponse.body.files.find(
-        (f: any) => f.path === '/files/same-path.txt',
+      const getFilesResponse = filesResponse.body as GetFilesResponseDto;
+      const savedFile = getFilesResponse.files.find(
+        (f) => f.path === '/files/same-path.txt',
       );
 
       expect(savedFile).toMatchObject({
@@ -227,9 +241,8 @@ describe('FileIngestionController (e2e)', () => {
         tags: ['updated', 'new'],
       });
 
-      // Verify only one file exists with this path
-      const filesWithPath = filesResponse.body.files.filter(
-        (f: any) => f.path === '/files/same-path.txt',
+      const filesWithPath = getFilesResponse.files.filter(
+        (f) => f.path === '/files/same-path.txt',
       );
       expect(filesWithPath).toHaveLength(1);
     });
@@ -239,7 +252,7 @@ describe('FileIngestionController (e2e)', () => {
       const fileMetadata = createTestFileMetadata({
         filename: 'timestamped.txt',
         path: '/files/timestamped.txt',
-        lastIndexedAt,
+        lastIndexedAt: new Date(lastIndexedAt),
       });
 
       const response = await request(app.getHttpServer())
@@ -247,17 +260,19 @@ describe('FileIngestionController (e2e)', () => {
         .send({ files: [fileMetadata] })
         .expect(200);
 
-      expect(response.body.summary.successful).toBe(1);
+      const ingestResponse = response.body as IngestResponseDto;
+      expect(ingestResponse.summary.successful).toBe(1);
 
       const filesResponse = await request(app.getHttpServer())
         .get('/files')
         .expect(200);
 
-      const savedFile = filesResponse.body.files.find(
-        (f: any) => f.path === '/files/timestamped.txt',
+      const getFilesResponse = filesResponse.body as GetFilesResponseDto;
+      const savedFile = getFilesResponse.files.find(
+        (f) => f.path === '/files/timestamped.txt',
       );
 
-      expect(new Date(savedFile?.lastIndexedAt)).toEqual(
+      expect(new Date(savedFile?.lastIndexedAt || '')).toEqual(
         new Date(lastIndexedAt),
       );
     });
@@ -268,17 +283,16 @@ describe('FileIngestionController (e2e)', () => {
         .send({ invalid: 'data' })
         .expect(400);
 
-      // Verify the Zod exception filter response structure
-      expect(response.body).toMatchObject({
+      const errorResponse = response.body as ErrorResponseDto;
+      expect(errorResponse).toMatchObject({
         statusCode: 400,
         message: 'Validation failed',
         errors: expect.any(Array),
         timestamp: expect.any(String),
       });
 
-      // Verify error details
-      expect(response.body.errors).toHaveLength(1);
-      expect(response.body.errors[0]).toMatchObject({
+      expect(errorResponse.errors).toHaveLength(1);
+      expect(errorResponse.errors[0]).toMatchObject({
         field: 'files',
         message: expect.any(String),
         code: expect.any(String),
@@ -287,7 +301,7 @@ describe('FileIngestionController (e2e)', () => {
 
     it('should return 400 for invalid file metadata', async () => {
       const invalidFileMetadata = {
-        filename: '', // Invalid: empty filename
+        filename: '',
         fileType: 'text/plain',
         path: '/files/invalid.txt',
       };
@@ -297,20 +311,19 @@ describe('FileIngestionController (e2e)', () => {
         .send({ files: [invalidFileMetadata] })
         .expect(400);
 
-      // Verify the Zod exception filter response structure
-      expect(response.body).toMatchObject({
+      const errorResponse = response.body as ErrorResponseDto;
+      expect(errorResponse).toMatchObject({
         statusCode: 400,
         message: 'Validation failed',
         errors: expect.any(Array),
         timestamp: expect.any(String),
       });
 
-      // Verify error details for empty filename
-      const filenameError = response.body.errors.find(
-        (error: any) => error.field === 'files.0.filename',
+      const filenameError = errorResponse.errors.find(
+        (error) => error.field === 'files.0.filename',
       );
       expect(filenameError).toBeDefined();
-      expect(filenameError.message).toContain(
+      expect(filenameError?.message).toContain(
         'String must contain at least 1 character(s)',
       );
     });
@@ -318,7 +331,6 @@ describe('FileIngestionController (e2e)', () => {
 
   describe('GET /files', () => {
     it('should return all files with their tags', async () => {
-      // Create some test files
       const fileMetadataList = [
         createTestFileMetadata({
           filename: 'file1.txt',
@@ -348,13 +360,13 @@ describe('FileIngestionController (e2e)', () => {
         .get('/files')
         .expect(200);
 
-      expect(response.body).toHaveProperty('files');
-      expect(response.body).toHaveProperty('count');
-      expect(response.body.files).toBeInstanceOf(Array);
-      expect(response.body.count).toBeGreaterThanOrEqual(3);
+      const getFilesResponse = response.body as GetFilesResponseDto;
+      expect(getFilesResponse).toHaveProperty('files');
+      expect(getFilesResponse).toHaveProperty('count');
+      expect(getFilesResponse.files).toBeInstanceOf(Array);
+      expect(getFilesResponse.count).toBeGreaterThanOrEqual(3);
 
-      // Find our test files
-      const testFiles = response.body.files.filter((f: any) =>
+      const testFiles = getFilesResponse.files.filter((f) =>
         ['/files/file1.txt', '/images/file2.jpg', '/data/file3.json'].includes(
           f.path,
         ),
@@ -362,8 +374,7 @@ describe('FileIngestionController (e2e)', () => {
 
       expect(testFiles).toHaveLength(3);
 
-      // Verify each file has the correct structure
-      testFiles.forEach((file: any) => {
+      testFiles.forEach((file) => {
         expect(file).toHaveProperty('id');
         expect(file).toHaveProperty('filename');
         expect(file).toHaveProperty('fileType');
@@ -374,15 +385,20 @@ describe('FileIngestionController (e2e)', () => {
         expect(file).toHaveProperty('tags');
       });
 
-      // Verify specific file data
-      const file1 = testFiles.find((f: any) => f.path === '/files/file1.txt');
+      const file1 = testFiles.find((f) => f.path === '/files/file1.txt');
+      if (file1) {
+        file1.tags = file1.tags.sort();
+      }
       expect(file1).toMatchObject({
         filename: 'file1.txt',
         fileType: 'text/plain',
-        tags: ['text', 'simple'],
+        tags: ['simple', 'text'],
       });
 
-      const file2 = testFiles.find((f: any) => f.path === '/images/file2.jpg');
+      const file2 = testFiles.find((f) => f.path === '/images/file2.jpg');
+      if (file2) {
+        file2.tags = file2.tags.sort();
+      }
       expect(file2).toMatchObject({
         filename: 'file2.jpg',
         fileType: 'image/jpeg',
@@ -395,11 +411,12 @@ describe('FileIngestionController (e2e)', () => {
         .get('/files')
         .expect(200);
 
-      expect(response.body).toMatchObject({
+      const getFilesResponse = response.body as GetFilesResponseDto;
+      expect(getFilesResponse).toMatchObject({
         files: expect.any(Array),
         count: expect.any(Number),
       });
-      expect(response.body.count).toBeGreaterThanOrEqual(0);
+      expect(getFilesResponse.count).toBeGreaterThanOrEqual(0);
     });
   });
 });

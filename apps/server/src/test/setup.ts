@@ -27,17 +27,17 @@ export const setup = async () => {
     },
   );
 
-  // Create a new pool for testing
   const testPool = new Pool({
     connectionString: TEST_DATABASE_URL,
   });
 
-  // Create drizzle instance
   const testDb = drizzle(testPool, { schema });
 
   await migrate(testDb, {
     migrationsFolder: path.resolve(__dirname, '../../migrations'),
   });
+
+  await testPool.end();
 
   console.timeEnd('global-setup');
 
@@ -45,20 +45,14 @@ export const setup = async () => {
     console.time('global-cleanup');
 
     if (process.env.CI) {
-      // ️️️✅ Best Practice: Leave the DB up in dev environment
       await dockerCompose.down();
     } else {
-      // ✅ Best Practice: Clean the database occasionally
       if (Math.ceil(Math.random() * 10) === 10) {
         await testDb.delete(schema.scanPathIgnores);
         await testDb.delete(schema.tags);
         await testDb.delete(schema.scanPaths);
         await testDb.delete(schema.files);
       }
-    }
-
-    if (testPool) {
-      await testPool.end();
     }
 
     console.timeEnd('global-cleanup');
