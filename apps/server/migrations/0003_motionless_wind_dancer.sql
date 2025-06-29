@@ -1,0 +1,1 @@
+ALTER TABLE "files" ADD CONSTRAINT "files_path_unique" UNIQUE("path");
