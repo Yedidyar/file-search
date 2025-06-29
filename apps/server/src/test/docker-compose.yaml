@@ -10,8 +10,3 @@ services:
     ports:
       - '5433:5432'
     tmpfs: /var/lib/postgresql/data
-    volumes:
-      - postgres_test_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_test_data:
