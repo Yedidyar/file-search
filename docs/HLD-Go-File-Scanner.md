@@ -26,32 +26,37 @@ This document outlines the design for a Go-based file scanning agent that will b
 
 ### Functional Requirements
 
-**Must Have (MVP):**
+**Must Have (POC/MVP):**
 
 - Scan specified file system paths for file metadata
 - Extract basic file information (filename, path, size, modification time, MIME type)
-- Implement incremental scanning to detect file changes
+- Implement incremental scanning to detect file changes (mod time + size)
 - Batch HTTP requests to the main API server
-- Support configuration via YAML files with server-side config updates
-- Run as scheduled task (cron, Task Scheduler, K8s CronJob)
-- Maintain local state using SQLite for change detection and scan resumption
-- Handle network failures with exponential backoff retry logic
+- Support configuration via static YAML files
+- Run as scheduled task (cron, Task Scheduler)
+- Maintain local state using SQLite for change detection
+- Basic retry logic (3 attempts with simple backoff)
 - Support API key authentication via environment variables
-- Agent registration and heartbeat with server
-- On-demand scan triggering from server
+- Basic agent registration and heartbeat with server
 - File deletion detection and reporting
-- Atomic file-level processing with batch commits to SQLite
 
 **Should Have (MVP):**
 
 - Cross-platform compatibility (Linux, Windows, macOS)
 - Configurable batch sizes and scan intervals
-- Comprehensive logging and error reporting
+- Basic logging and error reporting
 - Graceful handling of permission errors
 - Support for ignore patterns (glob-based)
+
+**Deferred to Post-MVP:**
+
+- Server-side config updates and sync
+- On-demand scan triggering from server
+- Atomic file-level processing with batch commits to SQLite
 - SQLite backup and recovery mechanisms
-- Exponential backoff for failed API calls
-- Circuit breaker pattern for API failures
+- Advanced exponential backoff and circuit breaker patterns
+- Scan session management and resumption
+- Comprehensive monitoring and observability
 
 **Could Have (Future):**
 
@@ -64,23 +69,39 @@ This document outlines the design for a Go-based file scanning agent that will b
 
 ### Non-Functional Requirements
 
-**Performance:**
+**Performance (MVP Targets):**
+
+- Handle thousands of files efficiently (10K+ files)
+- Reasonable memory footprint (<200MB typical usage)
+- Reasonable startup time (<10 seconds)
+- Basic concurrent file processing (5-10 workers)
+- Support up to 100K files per scan path (MVP limit)
+- Streaming file processing (no full dataset in memory)
+
+**Performance (Production Targets - Post MVP):**
 
 - Handle tens of thousands of files efficiently
 - Minimal memory footprint (<100MB typical usage)
 - Fast startup time (<5 seconds)
 - Concurrent file processing with worker pools (10-20 workers)
 - Support up to 1M files per scan path
-- Streaming file processing (no full dataset in memory)
+- Advanced performance optimizations
 
-**Reliability:**
+**Reliability (MVP):**
+
+- Handle basic network failures with simple retry logic
+- Handle file system permission errors gracefully
+- Basic scan state persistence (restart from beginning acceptable for MVP)
+- Idempotent operations with the main server
+- Basic error recovery (delete corrupted SQLite and rescan)
+
+**Reliability (Production - Post MVP):**
 
 - Survive network outages with offline operation capability
-- Handle file system permission errors gracefully
 - Maintain scan state across restarts with resume capability
-- Idempotent operations with the main server
 - SQLite corruption recovery with backup mechanisms
 - Circuit breaker pattern for API failures
+- Advanced error handling and recovery
 
 **Portability:**
 
@@ -278,8 +299,31 @@ func (c *APIClient) GetCommands(ctx context.Context) ([]Command, error)
 
 ### SQLite Schema Design
 
+#### MVP Schema (Simplified)
+
 ```sql
--- Scan sessions for resumability
+-- File state for change detection (MVP)
+CREATE TABLE file_states (
+    path TEXT PRIMARY KEY,
+    mod_time INTEGER NOT NULL,  -- Unix timestamp
+    size INTEGER NOT NULL,
+    last_synced INTEGER NOT NULL  -- Unix timestamp
+);
+
+-- Simple agent configuration cache (MVP)
+CREATE TABLE agent_config (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+-- Basic index for performance
+CREATE INDEX idx_file_states_last_synced ON file_states(last_synced);
+```
+
+#### Production Schema (Post-MVP)
+
+```sql
+-- Scan sessions for resumability (Post-MVP)
 CREATE TABLE scan_sessions (
     id TEXT PRIMARY KEY,
     started_at TIMESTAMP NOT NULL,
@@ -291,7 +335,7 @@ CREATE TABLE scan_sessions (
     failed_files INTEGER DEFAULT 0
 );
 
--- File state for change detection
+-- Enhanced file state for change detection (Post-MVP)
 CREATE TABLE file_states (
     path TEXT PRIMARY KEY,
     mod_time TIMESTAMP NOT NULL,
@@ -303,14 +347,7 @@ CREATE TABLE file_states (
     last_error TEXT
 );
 
--- Agent configuration cache
-CREATE TABLE config_cache (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    updated_at TIMESTAMP NOT NULL
-);
-
--- Scan history (retained for 30 days)
+-- Scan history (retained for 30 days) (Post-MVP)
 CREATE TABLE scan_history (
     id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL,
@@ -321,7 +358,7 @@ CREATE TABLE scan_history (
     FOREIGN KEY (session_id) REFERENCES scan_sessions(id)
 );
 
--- Indexes for performance
+-- Additional indexes for performance
 CREATE INDEX idx_file_states_sync_status ON file_states(sync_status);
 CREATE INDEX idx_file_states_last_scanned ON file_states(last_scanned_at);
 CREATE INDEX idx_scan_history_session ON scan_history(session_id);
@@ -329,6 +366,17 @@ CREATE INDEX idx_scan_history_timestamp ON scan_history(timestamp);
 ```
 
 ### Backup and Recovery Strategy
+
+#### MVP Approach (Simplified)
+
+**Basic Recovery Strategy:**
+
+- **Corruption Detection**: Simple integrity check on startup
+- **Recovery**: If SQLite corrupts, delete database and perform full rescan
+- **Acceptable for MVP**: Data loss is acceptable since it's just metadata cache
+- **No automatic backups**: Keeps implementation simple
+
+#### Production Approach (Post-MVP)
 
 **SQLite Backup Mechanism:**
 
@@ -356,10 +404,31 @@ func (bm *BackupManager) CleanupOldBackups() error
 
 **New API Endpoints Required:**
 
-1. **Agent Management Endpoints:**
+#### MVP Endpoints (Minimal)
 
 ```typescript
-// Agent registration
+// Basic agent registration (MVP)
+POST /api/agents/register
+{
+  agentId: string,
+  hostname: string,
+  version: string
+}
+
+// Simple heartbeat (MVP)
+POST /api/agents/heartbeat
+{
+  agentId: string,
+  status: 'healthy' | 'error',
+  lastScanTime: string,
+  filesProcessed: number
+}
+```
+
+#### Production Endpoints (Post-MVP)
+
+```typescript
+// Enhanced agent registration
 POST /api/agents/register
 {
   agentId: string,
@@ -369,7 +438,7 @@ POST /api/agents/register
   capabilities: string[]
 }
 
-// Heartbeat
+// Detailed heartbeat
 POST /api/agents/heartbeat/{agentId}
 {
   status: 'healthy' | 'degraded' | 'error',
@@ -379,7 +448,7 @@ POST /api/agents/heartbeat/{agentId}
   memoryUsage: number
 }
 
-// Get agent configuration
+// Get agent configuration (Post-MVP)
 GET /api/agents/{agentId}/config
 Response: {
   scanPaths: string[],
@@ -388,7 +457,7 @@ Response: {
   batchSize: number
 }
 
-// Get commands for agent
+// Get commands for agent (Post-MVP)
 GET /api/agents/{agentId}/commands
 Response: {
   commands: [{
@@ -419,11 +488,13 @@ POST /api/files/ingest
 
 **Database Schema Updates:**
 
+#### MVP Schema Changes
+
 ```sql
--- Add file size column to existing files table
+-- Add file size column to existing files table (REQUIRED)
 ALTER TABLE files ADD COLUMN file_size BIGINT;
 
--- Create agent management tables
+-- Basic agent tracking table (MVP)
 CREATE TABLE agents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   agent_id VARCHAR(255) UNIQUE NOT NULL,
@@ -434,7 +505,12 @@ CREATE TABLE agents (
   created_at TIMESTAMP WITH TIME ZONE NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
+```
 
+#### Production Schema Changes (Post-MVP)
+
+```sql
+-- Enhanced agent management tables
 CREATE TABLE agent_scan_paths (
   agent_id UUID REFERENCES agents(id),
   path_glob TEXT NOT NULL,
@@ -454,21 +530,32 @@ CREATE TABLE agent_commands (
 
 ### Error Handling and Retry Strategy
 
-**API Retry Logic:**
+#### MVP Approach (Simplified)
+
+**Basic Retry Logic:**
+
+- **Simple backoff**: 1s, 5s, 15s (3 attempts total)
+- **Batch handling**: Entire batch fails or succeeds (no partial retry)
+- **Error logging**: Log errors and continue processing
+- **SQLite recovery**: Delete corrupted database and rescan
+
+#### Production Approach (Post-MVP)
+
+**Advanced API Retry Logic:**
 
 - **Exponential backoff**: 1s, 2s, 4s, 8s, 16s, 32s, max 5 minutes
 - **Max retries**: 6 attempts over ~1 hour total
 - **Circuit breaker**: Stop after 50% failure rate over 10 requests
 - **Cool-down period**: 2 minutes before resuming after circuit break
 
-**Batch Error Handling:**
+**Advanced Batch Error Handling:**
 
 - **Partial failures**: Retry only failed files from batch
 - **Validation errors**: Log error, mark file as failed, continue processing
 - **Network errors**: Retry entire batch with exponential backoff
 - **Server errors (5xx)**: Retry with backoff, circuit breaker applies
 
-**SQLite Error Recovery:**
+**Advanced SQLite Error Recovery:**
 
 - **Corruption detection**: Automatic integrity checks on startup
 - **Backup restoration**: Automatic fallback to latest valid backup
@@ -538,95 +625,132 @@ CREATE TABLE agent_commands (
 
 ## Milestones & Tasks
 
-### Milestone 1: Project Setup & Core Infrastructure
+### Milestone 1: MVP Core Infrastructure
 
-**Duration:** 2 weeks  
+**Duration:** 1-2 weeks  
 **Deliverables:** Basic project structure and core components
 
 **Tasks:**
 
 - [ ] Set up Nx workspace with @nx-go/nx-go plugin
 - [ ] Create Go module structure in `apps/scanner`
-- [ ] Implement SQLite schema and basic operations
-- [ ] Create configuration management system
-- [ ] Implement basic file system scanning
-- [ ] Add structured logging with JSON format
-- [ ] Create backup and recovery mechanisms
-- [ ] Unit tests for core components
+- [ ] Implement simplified SQLite schema (file_states, agent_config)
+- [ ] Create basic YAML configuration system
+- [ ] Implement basic file system scanning with change detection
+- [ ] Add simple text logging
+- [ ] Basic unit tests for core components
 
-### Milestone 2: API Integration & Communication
+**Deferred to Post-MVP:**
 
-**Duration:** 2 weeks  
-**Deliverables:** Full API integration with retry logic
+- Advanced structured JSON logging
+- Backup and recovery mechanisms
+- Complex configuration management
+
+### Milestone 2: MVP API Integration
+
+**Duration:** 1-2 weeks  
+**Deliverables:** Basic API integration with simple retry logic
 
 **Tasks:**
 
-- [ ] Implement HTTP API client with authentication
-- [ ] Add agent registration and heartbeat endpoints
+- [ ] Add file_size column to existing files table
+- [ ] Implement basic HTTP API client with API key authentication
+- [ ] Add simple agent registration and heartbeat endpoints
 - [ ] Implement file ingestion with batching
-- [ ] Add exponential backoff retry logic
-- [ ] Implement circuit breaker pattern
-- [ ] Add configuration sync from server
-- [ ] Implement command polling for on-demand scans
-- [ ] Integration tests with mock server
+- [ ] Add basic retry logic (3 attempts)
+- [ ] Create basic agents table in database
+- [ ] Integration tests with real server
 
-### Milestone 3: State Management & Resumption
+**Deferred to Post-MVP:**
 
-**Duration:** 2 weeks  
-**Deliverables:** Robust state management and scan resumption
+- Advanced exponential backoff and circuit breaker
+- Configuration sync from server
+- Command polling for on-demand scans
+
+### Milestone 3: MVP State Management
+
+**Duration:** 1 week  
+**Deliverables:** Basic state management and file change detection
 
 **Tasks:**
 
 - [ ] Implement change detection with mod time + size
-- [ ] Add scan session management
-- [ ] Implement scan resumption after interruption
 - [ ] Add file deletion detection and reporting
-- [ ] Implement atomic batch processing
-- [ ] Add retry logic for failed individual files
-- [ ] Performance optimization for large file sets
-- [ ] Comprehensive error handling
+- [ ] Basic error handling and logging
+- [ ] Performance testing with moderate file sets (10K files)
+- [ ] End-to-end testing
 
-### Milestone 4: Production Readiness
+**Deferred to Post-MVP:**
 
-**Duration:** 2 weeks  
-**Deliverables:** Production-ready agent with monitoring
+- Scan session management and resumption
+- Atomic batch processing
+- Individual file retry logic
+- Advanced performance optimization
+
+### Milestone 4: MVP Deployment Ready
+
+**Duration:** 1 week  
+**Deliverables:** MVP-ready agent for initial deployment
 
 **Tasks:**
 
-- [ ] Cross-platform compatibility testing
-- [ ] Security hardening and best practices
-- [ ] Performance testing and optimization
-- [ ] Deployment automation and documentation
-- [ ] Monitoring and alerting setup
-- [ ] Operational runbooks
-- [ ] End-to-end testing in staging environment
-- [ ] Production deployment preparation
+- [ ] Cross-platform compatibility testing (Linux, Windows)
+- [ ] Basic security practices (API key handling)
+- [ ] Simple deployment scripts and documentation
+- [ ] Basic operational documentation
+- [ ] MVP testing in staging environment
+
+**Post-MVP Milestones:**
+
+### Milestone 5: Production Hardening (Post-MVP)
+
+- Advanced security hardening
+- Comprehensive monitoring and alerting
+- Performance optimization
+- Operational runbooks
+- Advanced deployment automation
+
+### Milestone 6: Advanced Features (Post-MVP)
+
+- Scan session management and resumption
+- Advanced retry and circuit breaker patterns
+- Configuration sync from server
+- Command polling and on-demand scans
+- Backup and recovery mechanisms
 
 ## MVP vs Future Features
 
-### MVP Scope (Milestones 1-4)
+### MVP Scope (Milestones 1-4) - Simplified
 
 **Core MVP Features:**
 
-- ✅ File system scanning with basic metadata extraction
-- ✅ SQLite-based change detection (mod time + size)
-- ✅ Batch API integration with retry logic
-- ✅ Agent registration and heartbeat
-- ✅ Configuration sync from server
-- ✅ On-demand scan triggering
-- ✅ Scan resumption after interruption
+- ✅ File system scanning with basic metadata extraction (filename, path, size, mod time, MIME type)
+- ✅ SQLite-based change detection (mod time + size only)
+- ✅ Batch API integration with basic retry logic (3 attempts)
+- ✅ Basic agent registration and heartbeat
+- ✅ Static YAML configuration files
 - ✅ File deletion detection
 - ✅ Basic error handling and logging
-- ✅ Cross-platform binary deployment
-- ✅ SQLite backup and recovery
+- ✅ Cross-platform binary deployment (Linux, Windows)
+- ✅ Simple deployment scripts
 
 **MVP Constraints:**
 
 - Single agent deployment (no multi-agent coordination)
 - Basic change detection (no content hashing)
-- Simple configuration management
-- Standard retry and circuit breaker patterns
-- Basic monitoring via logs and heartbeat
+- Static configuration management (restart required for changes)
+- Simple retry logic (no circuit breakers)
+- Basic monitoring via logs and heartbeat only
+- SQLite corruption = delete and rescan (no backup/recovery)
+
+**Deferred from MVP:**
+
+- ❌ Configuration sync from server
+- ❌ On-demand scan triggering
+- ❌ Scan resumption after interruption
+- ❌ SQLite backup and recovery
+- ❌ Advanced retry and circuit breaker patterns
+- ❌ Comprehensive monitoring and observability
 
 ### Future Enhancements (Post-MVP)
 
@@ -854,10 +978,50 @@ spec:
 
 ## Configuration Reference
 
-### Complete Configuration Example
+### Configuration Examples
+
+#### MVP Configuration (Simplified)
 
 ```yaml
-# config.yaml
+# config.yaml (MVP)
+server:
+  base_url: 'https://api.example.com'
+  api_key: '${SCANNER_API_KEY}' # Environment variable
+  timeout: '30s'
+
+agent:
+  id: '${HOSTNAME}-scanner'
+  heartbeat_interval: '60s'
+
+scanner:
+  scan_paths:
+    - '/data/documents'
+    - '/data/images'
+    - "\\\\server\\shared\\files" # Windows UNC path
+
+  ignore_patterns:
+    - '*.tmp'
+    - '*.log'
+    - '.git/*'
+    - 'node_modules/*'
+    - 'Thumbs.db'
+    - '.DS_Store'
+
+  batch_size: 100
+  worker_count: 5
+
+database:
+  path: './scanner_state.db'
+
+logging:
+  level: 'info'
+  file: './scanner.log'
+```
+
+#### Production Configuration (Post-MVP)
+
+```yaml
+# config.yaml (Production)
 server:
   base_url: 'https://api.example.com'
   api_key: '${SCANNER_API_KEY}' # Environment variable
@@ -1141,3 +1305,28 @@ This High-Level Design provides a comprehensive roadmap for implementing a produ
 The phased implementation approach ensures steady progress with regular deliverables, while the comprehensive task breakdown provides clear guidance for development teams. The integration with the Nx workspace using [@nx-go/nx-go](https://github.com/nx-go/nx-go) ensures consistency with existing development practices.
 
 This solution addresses the core requirement of efficiently scanning and ingesting file metadata while maintaining the agent's focus on speed, reliability, and operational simplicity.
+
+## MVP vs Production Design Summary
+
+This HLD has been structured to support both MVP and production deployment strategies:
+
+### MVP Design Choices (Weeks 1-4)
+
+- **Simplified SQLite schema**: 2 tables instead of 4+ tables
+- **Basic retry logic**: 3 attempts vs advanced exponential backoff
+- **Static configuration**: YAML files vs server-side config sync
+- **Simple error handling**: Log and continue vs comprehensive recovery
+- **Minimal API endpoints**: 2 endpoints vs 4+ endpoints
+- **Basic monitoring**: Text logs vs structured JSON + metrics
+- **Performance targets**: 10K files vs 1M+ files
+
+### Production Evolution (Post-MVP)
+
+- **Advanced state management**: Scan sessions and resumption
+- **Sophisticated error handling**: Circuit breakers and partial retries
+- **Dynamic configuration**: Server-side config sync and hot reloading
+- **Comprehensive monitoring**: Health endpoints, metrics, and alerting
+- **Enhanced reliability**: Backup/recovery and corruption handling
+- **Scalability features**: Advanced performance optimization
+
+This approach ensures rapid MVP delivery while maintaining a clear path to production-grade capabilities.
