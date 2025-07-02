@@ -14,7 +14,7 @@ export const files = pgTable('files', {
 
   filename: text('filename').notNull(),
   fileType: text('file_type').notNull(),
-  path: text('path').notNull(),
+  path: text('path').notNull().unique(),
 
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
