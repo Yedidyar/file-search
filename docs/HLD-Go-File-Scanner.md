@@ -22,6 +22,30 @@ This document outlines the design for a Go-based file scanning agent that will b
 14. [Monitoring & Observability](#monitoring--observability)
 15. [Future Enhancements](#future-enhancements)
 
+## Critical Path & Timeline Summary
+
+### Feature-to-Phase Mapping
+
+| **Week**     | **Milestone**       | **Deliverables**                                 | **Critical Path**                                                       |
+| ------------ | ------------------- | ------------------------------------------------ | ----------------------------------------------------------------------- |
+| **Week 1-2** | Core Infrastructure | SQLite schema, file scanning, config management  | **BLOCKER**: SQLite schema must be complete before API integration      |
+| **Week 3-4** | API Integration     | HTTP client, retry logic, agent registration     | **DEPENDENCY**: Requires server contract and file_size column migration |
+| **Week 5-6** | State Management    | Change detection, scan sessions, backup/recovery | **PARALLEL**: Can develop alongside API integration                     |
+| **Week 7-8** | MVP Deployment      | Testing, optimization, deployment scripts        | **DEPENDENCY**: Requires all previous milestones                        |
+
+### Parallel Development Opportunities
+
+- ✅ **Weeks 1-2**: File scanning engine can be developed in parallel with SQLite schema
+- ✅ **Weeks 3-4**: API client development can start once server contract is defined
+- ✅ **Weeks 5-6**: Backup/recovery mechanisms can be developed in parallel with state management
+- ⚠️ **Blocker**: Server-side file_size column migration must complete before API integration testing
+
+### Critical Dependencies
+
+1. **Server Contract Definition** (Week 2): Required before API client implementation
+2. **Database Migration** (Week 3): `file_size` column addition to existing `files` table
+3. **Cross-Platform Testing** (Week 7): Required before production deployment
+
 ## Requirements
 
 ### Functional Requirements
@@ -157,6 +181,130 @@ graph TB
 
 ### Data Flow
 
+#### Normal Scan Cycle Sequence
+
+```mermaid
+sequenceDiagram
+    participant S as Scheduler
+    participant A as Scanner Agent
+    participant DB as SQLite DB
+    participant API as Main API Server
+    participant FS as File System
+
+    S->>A: Trigger scan (cron/scheduled)
+    A->>API: POST /agents/register
+    API-->>A: 200 OK (agent registered)
+    A->>API: GET /agents/config
+    API-->>A: 200 OK (config data)
+
+    A->>DB: Load last scan state
+    DB-->>A: File states & timestamps
+
+    loop For each scan path
+        A->>FS: Read directory & file metadata
+        FS-->>A: File list with mod times
+        A->>DB: Compare with stored states
+        DB-->>A: Changed files list
+    end
+
+    A->>API: POST /files/ingest (batch)
+    API-->>A: 200 OK (ingestion complete)
+    A->>DB: Update file states atomically
+
+    A->>API: POST /agents/heartbeat
+    API-->>A: 200 OK (heartbeat recorded)
+
+    A->>DB: Create backup (if scheduled)
+    A->>A: Log scan completion & metrics
+```
+
+#### Error Handling Flow
+
+```mermaid
+sequenceDiagram
+    participant A as Scanner Agent
+    participant API as Main API Server
+    participant DB as SQLite DB
+    participant CB as Circuit Breaker
+
+    A->>API: POST /files/ingest (batch)
+    API-->>A: 500 Server Error
+
+    A->>CB: Record failure
+    CB-->>A: Retry allowed
+
+    A->>A: Wait (exponential backoff)
+    A->>API: POST /files/ingest (retry)
+    API-->>A: 500 Server Error
+
+    A->>CB: Record failure
+    CB-->>A: Circuit opened (stop retries)
+
+    A->>DB: Mark batch as failed
+    A->>A: Log error & continue with next batch
+
+    Note over CB: Cool-down period (2 minutes)
+    CB->>A: Circuit half-open (allow test)
+    A->>API: POST /files/ingest (test request)
+    API-->>A: 200 OK
+    CB->>A: Circuit closed (resume normal operation)
+```
+
+### Data Flow Summary
+
+    loop For each scan path
+        A->>FS: Read directory & file metadata
+        FS-->>A: File list with mod times
+        A->>DB: Compare with stored states
+        DB-->>A: Changed files list
+    end
+
+    A->>API: POST /files/ingest (batch)
+    API-->>A: 200 OK (ingestion complete)
+    A->>DB: Update file states atomically
+
+    A->>API: POST /agents/heartbeat
+    API-->>A: 200 OK (heartbeat recorded)
+
+    A->>DB: Create backup (if scheduled)
+    A->>A: Log scan completion & metrics
+
+````
+
+#### Error Handling Flow
+
+```mermaid
+sequenceDiagram
+    participant A as Scanner Agent
+    participant API as Main API Server
+    participant DB as SQLite DB
+    participant CB as Circuit Breaker
+
+    A->>API: POST /files/ingest (batch)
+    API-->>A: 500 Server Error
+
+    A->>CB: Record failure
+    CB-->>A: Retry allowed
+
+    A->>A: Wait (exponential backoff)
+    A->>API: POST /files/ingest (retry)
+    API-->>A: 500 Server Error
+
+    A->>CB: Record failure
+    CB-->>A: Circuit opened (stop retries)
+
+    A->>DB: Mark batch as failed
+    A->>A: Log error & continue with next batch
+
+    Note over CB: Cool-down period (2 minutes)
+    CB->>A: Circuit half-open (allow test)
+    A->>API: POST /files/ingest (test request)
+    API-->>A: 200 OK
+    CB->>A: Circuit closed (resume normal operation)
+````
+
+### Data Flow Summary
+
 1. **Agent Registration**: Agent registers with server on startup
 2. **Config Sync**: Agent pulls latest configuration from server
 3. **Scheduler triggers** the Go agent or on-demand command received
@@ -170,25 +318,25 @@ graph TB
 
 ## Design Decisions & Tradeoffs
 
-### Technology Choices
+### Key Technology Decisions
 
-| Decision               | Rationale                                                                                             | Tradeoffs                                                      |
-| ---------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| **Go Language**        | Fast native code, excellent concurrency, single binary deployment, Windows Server 2008 compatibility  | Learning curve for team, different from existing Node.js stack |
-| **SQLite for State**   | Embedded, no external dependencies, ACID transactions, excellent Go support, WAL mode for performance | Single-threaded writes (not an issue for this use case)        |
-| **HTTP REST API**      | Simple, leverages existing `/files/ingest` endpoint, stateless                                        | Less efficient than message queues, but simpler                |
-| **YAML Configuration** | Human-readable, supports comments, good Go libraries                                                  | Slightly more complex parsing than JSON                        |
-| **Batch Processing**   | Reduces network overhead, leverages server idempotency                                                | Potential for larger memory usage, delayed updates             |
+| Decision             | Rationale                                                                                             | Tradeoffs                                                      |
+| -------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| **Go Language**      | Fast native code, excellent concurrency, single binary deployment, Windows Server 2008 compatibility  | Learning curve for team, different from existing Node.js stack |
+| **SQLite for State** | Embedded, no external dependencies, ACID transactions, excellent Go support, WAL mode for performance | Single-threaded writes (not an issue for this use case)        |
+| **HTTP REST API**    | Simple, leverages existing `/files/ingest` endpoint, stateless                                        | Less efficient than message queues, but simpler                |
 
 ### File Change Detection Strategy
 
-| Approach                   | Pros                                      | Cons                      | Decision           |
-| -------------------------- | ----------------------------------------- | ------------------------- | ------------------ |
-| **Mod Time + Size Only**   | Fast, minimal I/O, works for 95% of cases | Misses rare edge cases    | ✅ **MVP Choice**  |
-| **Content Hash (SHA-256)** | 100% accurate, detects all changes        | High I/O cost, slow scans | Future enhancement |
-| **Hybrid Approach**        | Fast + configurable accuracy              | Complex logic             | Future enhancement |
+| Approach                   | Pros                                      | Cons                      | Decision           | **Switch Trigger**                                    |
+| -------------------------- | ----------------------------------------- | ------------------------- | ------------------ | ----------------------------------------------------- |
+| **Mod Time + Size Only**   | Fast, minimal I/O, works for 95% of cases | Misses rare edge cases    | ✅ **MVP Choice**  | Default for MVP                                       |
+| **Content Hash (SHA-256)** | 100% accurate, detects all changes        | High I/O cost, slow scans | Future enhancement | Enable when serving >100 agents OR scanning >1M files |
+| **Hybrid Approach**        | Fast + configurable accuracy              | Complex logic             | Future enhancement | Enable for high-accuracy requirements                 |
 
 **MVP Decision**: Use modification time + file size for change detection to optimize for speed and simplicity.
+
+**Production Trigger**: Enable content hashing when serving >100 agents or scanning >1M files per deployment.
 
 ### Architectural Tradeoffs
 
@@ -606,11 +754,12 @@ CREATE TABLE agent_commands (
 - File system operations and change detection
 - API client with mock server responses
 - Configuration parsing and validation
+- Error handling and retry logic
 
 **Integration Tests:**
 
-- End-to-end scanning workflows
-- API integration with real server
+- End-to-end scanning workflows with real file systems
+- API integration with test server
 - Database corruption and recovery scenarios
 - Network failure and retry scenarios
 - Multi-platform compatibility tests
@@ -618,7 +767,7 @@ CREATE TABLE agent_commands (
 **Performance Tests:**
 
 - Large file set scanning (100K+ files)
-- Memory usage profiling
+- Memory usage profiling and leak detection
 - Concurrent scan path processing
 - API throughput and latency testing
 - SQLite performance under load
@@ -627,7 +776,7 @@ CREATE TABLE agent_commands (
 
 ### Milestone 1: MVP Core Infrastructure
 
-**Duration:** 1-2 weeks  
+**Duration:** 1-2 weeks
 **Deliverables:** Basic project structure and core components
 
 **Tasks:**
@@ -648,7 +797,7 @@ CREATE TABLE agent_commands (
 
 ### Milestone 2: MVP API Integration
 
-**Duration:** 1-2 weeks  
+**Duration:** 1-2 weeks
 **Deliverables:** Basic API integration with simple retry logic
 
 **Tasks:**
@@ -669,7 +818,7 @@ CREATE TABLE agent_commands (
 
 ### Milestone 3: MVP State Management
 
-**Duration:** 1 week  
+**Duration:** 1 week
 **Deliverables:** Basic state management and file change detection
 
 **Tasks:**
@@ -689,7 +838,7 @@ CREATE TABLE agent_commands (
 
 ### Milestone 4: MVP Deployment Ready
 
-**Duration:** 1 week  
+**Duration:** 1 week
 **Deliverables:** MVP-ready agent for initial deployment
 
 **Tasks:**
@@ -839,9 +988,21 @@ CREATE TABLE agent_commands (
 
 ## Security Considerations
 
+### Threat Model Summary
+
+| **Threat**                                                   | **Impact** | **Mitigation**                                                   |
+| ------------------------------------------------------------ | ---------- | ---------------------------------------------------------------- |
+| **Agent Spoofing**: Attacker impersonates legitimate agent   | High       | HMAC request signing with shared secret                          |
+| **API Key Compromise**: Stolen API key used maliciously      | High       | Environment variables only, key rotation, rate limiting          |
+| **Path Traversal**: Agent scans unauthorized directories     | Medium     | Path sanitization, whitelist validation                          |
+| **Data Exfiltration**: Sensitive file content leaked         | Medium     | Metadata-only transmission, no file content access               |
+| **Local Database Tampering**: SQLite corruption/manipulation | Low        | File permissions, integrity checks, backups                      |
+| **Network Interception**: API traffic intercepted            | Medium     | HTTPS only, certificate validation, optional certificate pinning |
+
 ### Authentication & Authorization
 
-- **API Key Authentication**: Environment variables only (`SCANNER_API_KEY`)
+**API Key Authentication**: Environment variables only (`SCANNER_API_KEY`)
+
 - **Key Rotation**: Restart acceptable for key updates
 - **Certificate Validation**: Strict HTTPS certificate checking
 - **Timeout Configuration**: Configurable timeouts for all HTTP operations
@@ -855,20 +1016,6 @@ CREATE TABLE agent_commands (
 - **Principle of Least Privilege**: Only access to configured scan directories
 - **Audit Logging**: Log all file access attempts and permission errors
 
-**Security Configuration:**
-
-```bash
-# Create dedicated user
-sudo useradd -r -s /bin/false scanner
-
-# Set appropriate permissions
-sudo chown scanner:scanner /opt/scanner
-sudo chmod 750 /opt/scanner
-
-# Configure scan directory access
-sudo setfacl -R -m u:scanner:r /data/scan-paths
-```
-
 ### Data Protection
 
 - **No Sensitive Content**: Only metadata transmitted, no file content
@@ -879,7 +1026,7 @@ sudo setfacl -R -m u:scanner:r /data/scan-paths
 ### Network Security
 
 - **HTTPS Only**: All API communication encrypted
-- **Certificate Pinning**: Optional for high-security environments
+- **Certificate Validation**: Strict certificate checking with custom CA support
 - **Request Signing**: Optional HMAC signing for API requests
 - **Rate Limiting**: Respect server rate limits and implement client-side throttling
 
@@ -1118,35 +1265,155 @@ SCANNER_DATA_DIR=/var/lib/scanner
 
 ## Monitoring & Observability
 
-### Key Metrics
+### Prometheus Metrics
 
-**Scan Performance:**
+**Scan Performance Metrics:**
 
-- **Scan Duration**: Time taken for complete scan cycle
-- **Files Processed**: Count of files processed per scan
-- **Files Per Second**: Processing rate during active scanning
-- **Scan Success Rate**: Percentage of successful scans
+```prometheus
+# Scan duration in seconds
+scanner_scan_duration_seconds{agent_id="server-01", scan_path="/data/docs"}
 
-**API Performance:**
+# Files processed per scan
+scanner_files_processed_total{agent_id="server-01", action="created|updated|deleted|skipped"}
 
-- **API Success Rate**: Percentage of successful API calls
-- **API Response Time**: Average and P95 response times
-- **Batch Size**: Average files per batch
-- **Retry Rate**: Percentage of requests requiring retries
+# Scan success rate
+scanner_scan_success_rate{agent_id="server-01"}
 
-**System Performance:**
+# Processing rate during active scanning
+scanner_files_per_second{agent_id="server-01"}
+```
 
-- **Memory Usage**: Peak and average memory consumption
-- **CPU Usage**: Average and peak CPU utilization
-- **Database Size**: SQLite database size growth
-- **Disk I/O**: Read operations per second
+**API Performance Metrics:**
 
-**Error Tracking:**
+```prometheus
+# API call success rate
+scanner_api_requests_total{agent_id="server-01", endpoint="/files/ingest", status="success|failure"}
 
-- **Error Rate**: Count and types of errors encountered
-- **Permission Errors**: File access denied count
-- **Network Errors**: Connection and timeout failures
-- **Database Errors**: SQLite operation failures
+# API response time histogram
+scanner_api_request_duration_seconds{agent_id="server-01", endpoint="/files/ingest"}
+
+# Retry rate
+scanner_api_retry_count_total{agent_id="server-01", endpoint="/files/ingest"}
+
+# Circuit breaker state
+scanner_circuit_breaker_state{agent_id="server-01", state="closed|open|half_open"}
+```
+
+**System Performance Metrics:**
+
+```prometheus
+# Memory usage in bytes
+scanner_memory_usage_bytes{agent_id="server-01"}
+
+# CPU usage percentage
+scanner_cpu_usage_percent{agent_id="server-01"}
+
+# SQLite database size
+scanner_database_size_bytes{agent_id="server-01"}
+
+# File I/O operations
+scanner_file_io_operations_total{agent_id="server-01", operation="read|write"}
+```
+
+**Error Tracking Metrics:**
+
+```prometheus
+# Error count by type
+scanner_errors_total{agent_id="server-01", error_type="permission|network|database|validation"}
+
+# Failed files count
+scanner_failed_files_total{agent_id="server-01", reason="permission_denied|network_error|validation_error"}
+```
+
+### Sample Grafana Alert Rules
+
+```yaml
+# High API failure rate
+- alert: ScannerHighAPIFailureRate
+  expr: rate(scanner_api_requests_total{status="failure"}[5m]) / rate(scanner_api_requests_total[5m]) > 0.25
+  for: 30m
+  labels:
+    severity: warning
+  annotations:
+    summary: 'Scanner {{ $labels.agent_id }} has high API failure rate'
+    description: 'API failure rate is {{ $value | humanizePercentage }} for agent {{ $labels.agent_id }}'
+
+# Memory usage alert
+- alert: ScannerHighMemoryUsage
+  expr: scanner_memory_usage_bytes / (100 * 1024 * 1024) > 0.8
+  for: 5m
+  labels:
+    severity: critical
+  annotations:
+    summary: 'Scanner {{ $labels.agent_id }} memory usage is high'
+    description: 'Memory usage is {{ $value | humanizeBytes }} (>80% of 100MB limit)'
+
+# Scan failure alert
+- alert: ScannerConsecutiveFailures
+  expr: increase(scanner_scan_success_rate[1h]) == 0 and increase(scanner_scan_duration_seconds_count[1h]) >= 3
+  for: 0m
+  labels:
+    severity: critical
+  annotations:
+    summary: 'Scanner {{ $labels.agent_id }} has 3+ consecutive scan failures'
+```
+
+### ELK Stack Integration
+
+**Log Parsing Configuration (FluentD):**
+
+```ruby
+<filter scanner.**>
+  @type parser
+  key_name message
+  <parse>
+    @type json
+    time_key timestamp
+    time_format %Y-%m-%dT%H:%M:%S%z
+  </parse>
+</filter>
+
+<match scanner.**>
+  @type elasticsearch
+  host elasticsearch.example.com
+  port 9200
+  index_name scanner-logs-%Y.%m.%d
+  type_name _doc
+</match>
+```
+
+**Elasticsearch Query Examples:**
+
+```json
+// Find all scan failures in last 24 hours
+GET scanner-logs-*/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"match": {"level": "error"}},
+        {"match": {"component": "scanner"}},
+        {"range": {"timestamp": {"gte": "now-24h"}}}
+      ]
+    }
+  }
+}
+
+// Aggregate error types by agent
+GET scanner-logs-*/_search
+{
+  "aggs": {
+    "agents": {
+      "terms": {"field": "agent_id"},
+      "aggs": {
+        "error_types": {
+          "terms": {"field": "error_type"}
+        }
+      }
+    }
+  }
+}
+```
 
 ### Log Structure
 
@@ -1330,3 +1597,7 @@ This HLD has been structured to support both MVP and production deployment strat
 - **Scalability features**: Advanced performance optimization
 
 This approach ensures rapid MVP delivery while maintaining a clear path to production-grade capabilities.
+
+```
+
+```
