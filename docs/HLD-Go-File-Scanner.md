@@ -625,8 +625,6 @@ CREATE TABLE agent_commands (
 
 **Unit Tests:**
 
-- All core components with >90% coverage
-- SQLite operations and schema migrations
 - File system operations and change detection
 - API client with mock server responses
 - Configuration parsing and validation
@@ -635,10 +633,14 @@ CREATE TABLE agent_commands (
 **Integration Tests:**
 
 - End-to-end scanning workflows with real file systems
-- API integration with test server
 - Database corruption and recovery scenarios
 - Network failure and retry scenarios
 - Multi-platform compatibility tests
+
+**End-to-end Tests:**
+
+- End-to-end scanning workflows with real file systems
+- API integration with test server
 
 **Performance Tests:**
 
