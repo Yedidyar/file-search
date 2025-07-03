@@ -56,7 +56,8 @@ The agent is designed to be fast, minimal, portable, and compatible with legacy 
 - Basic retry logic (3 attempts with simple backoff)
 - Support API key authentication via environment variables
 - Basic agent registration and heartbeat with server
-- File deletion detection and reporting
+- File deletion detection
+- Support for ignore patterns (glob-based)
 
 **Should Have (MVP):**
 
@@ -64,14 +65,12 @@ The agent is designed to be fast, minimal, portable, and compatible with legacy 
 - Configurable batch sizes and scan intervals
 - Basic logging and error reporting
 - Graceful handling of permission errors
-- Support for ignore patterns (glob-based)
+- SQLite backup and recovery mechanisms
 
 **Deferred to Post-MVP:**
 
 - Server-side config updates and sync
-- On-demand scan triggering from server
 - Atomic file-level processing with batch commits to SQLite
-- SQLite backup and recovery mechanisms
 - Advanced exponential backoff and circuit breaker patterns
 - Scan session management and resumption
 - Comprehensive monitoring and observability
@@ -80,10 +79,8 @@ The agent is designed to be fast, minimal, portable, and compatible with legacy 
 
 - HTTP endpoint for on-demand scanning
 - Real-time file system watching
-- Metrics and monitoring endpoints
-- Configuration hot-reloading
 - Content-based file hashing for duplicate detection
-- Plugin system for custom file processors
+- Plugin system for custom file processors - TBD
 
 ### Non-Functional Requirements
 
@@ -124,7 +121,7 @@ The agent is designed to be fast, minimal, portable, and compatible with legacy 
 **Portability:**
 
 - Single binary deployment
-- Compatible with Go 1.17+ (Windows Server 2008 constraint)
+- Compatible with Go 1.17>= (Windows Server 2008 constraint)
 - No external runtime dependencies
 - Cross-compilation support
 
