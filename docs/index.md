@@ -3,28 +3,28 @@
 layout: home
 
 hero:
-  name: 'File Search'
+  name: 'File Search System'
   text: 'Documentation'
-  tagline: Comprehensive file scanning and search system with Go-based agents and modern web interface
+  tagline: Comprehensive file scanning and search system with distributed agents, web interface, and intelligent tagging
   actions:
     - theme: brand
       text: Get Started
       link: /quick-start
     - theme: alt
-      text: View File Scanner Agent Architecture Overview
-      link: /HLD-Go-File-Scanner
+      text: System Architecture Overview
+      link: /README
 
 features:
-  - title: 🚀 High Performance
-    details: Go-based file scanning agents designed for efficiency and speed, capable of handling thousands of files with minimal resource usage
-  - title: 🔍 Smart Search
-    details: Advanced search capabilities powered by Typesense, providing fast and relevant file discovery across your entire infrastructure
-  - title: 🌐 Cross-Platform
-    details: Compatible with Linux, Windows, and macOS, with support for legacy systems including Windows Server 2008
-  - title: 📊 Real-time Monitoring
-    details: Built-in agent management with heartbeat monitoring, configuration sync, and comprehensive observability
-  - title: 🔒 Secure & Reliable
-    details: API key authentication, retry logic, and robust error handling ensure secure and reliable file system scanning
-  - title: 📈 Scalable Architecture
-    details: Microservices architecture with NestJS backend, React frontend, and PostgreSQL database for enterprise-scale deployments
+  - title: 🔍 Smart Search & Discovery
+    details: Advanced search capabilities powered by Typesense with fuzzy matching, tag-based filtering, and real-time indexing for fast file discovery
+  - title: 🌐 Web-Based Interface
+    details: Modern React frontend with intuitive search filters, tag editing capabilities, and file upload functionality for seamless user experience
+  - title: 🚀 Distributed File Scanning
+    details: Go-based scanning agents deployed across multiple servers for efficient file system monitoring and metadata extraction
+  - title: 📊 Centralized Management
+    details: NestJS backend with PostgreSQL database providing unified file metadata management, agent coordination, and API services
+  - title: 🔒 Secure & Scalable
+    details: API key authentication, role-based access control, and microservices architecture designed for enterprise-scale deployments
+  - title: 📈 Intelligent Tagging
+    details: Rule-based automatic tagging system using directory structure and naming conventions, with manual tag editing capabilities
 ---
