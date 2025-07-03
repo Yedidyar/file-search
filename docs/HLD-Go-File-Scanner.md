@@ -2,7 +2,8 @@
 
 ## Executive Summary
 
-This document outlines the design for a Go-based file scanning agent that will be deployed on target file servers to efficiently scan file systems and synchronize metadata with the Scientific File Tagging and Retrieval System. The agent is designed to be fast, minimal, portable, and compatible with legacy systems including Windows Server 2008.
+This document outlines the design for a Go-based file scanning agent that will be deployed on target file servers to efficiently scan file systems and synchronize metadata.
+The agent is designed to be fast, minimal, portable, and compatible with legacy systems including Windows Server 2008.
 
 ## Table of Contents
 
@@ -25,13 +26,6 @@ This document outlines the design for a Go-based file scanning agent that will b
 ## Critical Path & Timeline Summary
 
 ### Feature-to-Phase Mapping
-
-| **Week**     | **Milestone**       | **Deliverables**                                 | **Critical Path**                                                       |
-| ------------ | ------------------- | ------------------------------------------------ | ----------------------------------------------------------------------- |
-| **Week 1-2** | Core Infrastructure | SQLite schema, file scanning, config management  | **BLOCKER**: SQLite schema must be complete before API integration      |
-| **Week 3-4** | API Integration     | HTTP client, retry logic, agent registration     | **DEPENDENCY**: Requires server contract and file_size column migration |
-| **Week 5-6** | State Management    | Change detection, scan sessions, backup/recovery | **PARALLEL**: Can develop alongside API integration                     |
-| **Week 7-8** | MVP Deployment      | Testing, optimization, deployment scripts        | **DEPENDENCY**: Requires all previous milestones                        |
 
 ### Parallel Development Opportunities
 
