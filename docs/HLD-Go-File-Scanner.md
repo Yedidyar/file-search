@@ -196,11 +196,11 @@ sequenceDiagram
         FS-->>A: File list with mod times
         A->>DB: Compare with stored states
         DB-->>A: Changed files list
+        A->>API: POST /files/ingest (batch)
+        API-->>A: 200 OK (ingestion complete)
+        A->>DB: Update file states atomically
     end
 
-    A->>API: POST /files/ingest (batch)
-    API-->>A: 200 OK (ingestion complete)
-    A->>DB: Update file states atomically
 
     A->>API: POST /agents/heartbeat
     API-->>A: 200 OK (heartbeat recorded)
