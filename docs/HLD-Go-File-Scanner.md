@@ -199,10 +199,11 @@ sequenceDiagram
         A->>API: POST /files/ingest (batch)
         API-->>A: 200 OK (ingestion complete)
         A->>DB: Update file states atomically
+        A->>API: POST /agents/heartbeat (scan progress)
+        API-->>A: 200 OK (heartbeat recorded)
     end
 
-
-    A->>API: POST /agents/heartbeat
+    A->>API: POST /agents/heartbeat (scan complete)
     API-->>A: 200 OK (heartbeat recorded)
 
     A->>DB: Create backup (if scheduled)
@@ -304,8 +305,9 @@ sequenceDiagram
 6. **Batch processing**: Changed files are batched for API submission
 7. **HTTP requests**: Batched requests sent to main API server with retry logic
 8. **State update**: SQLite updated atomically after successful server sync
-9. **Heartbeat**: Regular status updates sent to server
-10. **Backup**: Periodic SQLite backup for recovery
+9. **Progress heartbeat**: Status updates sent after each scan path completion
+10. **Completion heartbeat**: Final status update when entire scan is complete
+11. **Backup**: Periodic SQLite backup for recovery
 
 ## Design Decisions & Tradeoffs
 
