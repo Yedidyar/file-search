@@ -18,10 +18,8 @@ The agent is designed to be fast, minimal, portable, and compatible with legacy 
 9. [Risk Assessment & Mitigation](#risk-assessment--mitigation)
 10. [Performance Targets](#performance-targets)
 11. [Security Considerations](#security-considerations)
-12. [Deployment Strategies](#deployment-strategies)
-13. [Configuration Reference](#configuration-reference)
-14. [Monitoring & Observability](#monitoring--observability)
-15. [Future Enhancements](#future-enhancements)
+12. [Monitoring & Observability](#monitoring--observability)
+13. [Future Enhancements](#future-enhancements)
 
 ## Critical Path & Timeline Summary
 
