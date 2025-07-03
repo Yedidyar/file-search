@@ -244,59 +244,6 @@ sequenceDiagram
 
 ### Data Flow Summary
 
-    loop For each scan path
-        A->>FS: Read directory & file metadata
-        FS-->>A: File list with mod times
-        A->>DB: Compare with stored states
-        DB-->>A: Changed files list
-    end
-
-    A->>API: POST /files/ingest (batch)
-    API-->>A: 200 OK (ingestion complete)
-    A->>DB: Update file states atomically
-
-    A->>API: POST /agents/heartbeat
-    API-->>A: 200 OK (heartbeat recorded)
-
-    A->>DB: Create backup (if scheduled)
-    A->>A: Log scan completion & metrics
-
-````
-
-#### Error Handling Flow
-
-```mermaid
-sequenceDiagram
-    participant A as Scanner Agent
-    participant API as Main API Server
-    participant DB as SQLite DB
-    participant CB as Circuit Breaker
-
-    A->>API: POST /files/ingest (batch)
-    API-->>A: 500 Server Error
-
-    A->>CB: Record failure
-    CB-->>A: Retry allowed
-
-    A->>A: Wait (exponential backoff)
-    A->>API: POST /files/ingest (retry)
-    API-->>A: 500 Server Error
-
-    A->>CB: Record failure
-    CB-->>A: Circuit opened (stop retries)
-
-    A->>DB: Mark batch as failed
-    A->>A: Log error & continue with next batch
-
-    Note over CB: Cool-down period (2 minutes)
-    CB->>A: Circuit half-open (allow test)
-    A->>API: POST /files/ingest (test request)
-    API-->>A: 200 OK
-    CB->>A: Circuit closed (resume normal operation)
-````
-
-### Data Flow Summary
-
 1. **Agent Registration**: Agent registers with server on startup
 2. **Config Sync**: Agent pulls latest configuration from server
 3. **Scheduler triggers** the Go agent or on-demand command received
