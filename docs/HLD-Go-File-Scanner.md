@@ -424,18 +424,6 @@ CREATE INDEX idx_scan_history_timestamp ON scan_history(timestamp);
 - **Recovery**: Automatic corruption detection with fallback to latest backup
 - **Disaster recovery**: If all backups fail, rebuild from scratch with full scan
 
-```go
-type BackupManager struct {
-    dbPath     string
-    backupDir  string
-    maxBackups int
-}
-
-func (bm *BackupManager) CreateBackup() error
-func (bm *BackupManager) RestoreFromBackup(backupPath string) error
-func (bm *BackupManager) CleanupOldBackups() error
-```
-
 ## Integration Strategy
 
 ### Server-Side Requirements
