@@ -522,8 +522,7 @@ ALTER TABLE files ADD COLUMN file_size BIGINT;
 
 -- Basic agent tracking table (MVP)
 CREATE TABLE agents (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  agent_id VARCHAR(255) UNIQUE NOT NULL,
+  id UUID PRIMARY KEY,
   hostname VARCHAR(255) NOT NULL,
   version VARCHAR(50) NOT NULL,
   status VARCHAR(50) NOT NULL,
@@ -544,8 +543,7 @@ CREATE TABLE agent_scan_paths (
 );
 
 CREATE TABLE agent_commands (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  agent_id UUID REFERENCES agents(id),
+  id UUID PRIMARY KEY,
   command_type VARCHAR(50) NOT NULL,
   parameters JSONB,
   status VARCHAR(50) NOT NULL,
