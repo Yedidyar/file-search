@@ -44,3 +44,7 @@ Thumbs.db
 .github/instructions/nx.instructions.md
 
 .env*
+
+# VitePress
+docs/.vitepress/dist
+docs/.vitepress/cache
