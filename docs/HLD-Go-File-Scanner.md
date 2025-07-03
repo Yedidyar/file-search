@@ -335,56 +335,6 @@ apps/
 └── server/                     # Existing NestJS app
 ```
 
-### Core Components
-
-#### 1. Scanner Engine (`internal/agent/scanner.go`)
-
-```go
-type Scanner struct {
-    config     *Config
-    state      *StateManager
-    apiClient  *APIClient
-    workerPool chan struct{} // Semaphore for concurrent workers
-}
-
-// Core scanning logic with resumption support
-func (s *Scanner) ScanPaths(ctx context.Context, paths []string) error
-func (s *Scanner) processFile(ctx context.Context, filePath string) (*FileMetadata, error)
-func (s *Scanner) detectChanges(file *FileMetadata) (bool, error)
-```
-
-#### 2. State Manager (`internal/agent/state.go`)
-
-```go
-type StateManager struct {
-    db *sql.DB
-}
-
-// SQLite operations for change detection and resumption
-func (sm *StateManager) GetFileState(path string) (*FileState, error)
-func (sm *StateManager) UpdateFileState(file *FileMetadata) error
-func (sm *StateManager) CreateScanSession(paths []string) (*ScanSession, error)
-func (sm *StateManager) ResumeScanSession(sessionID string) (*ScanSession, error)
-```
-
-#### 3. API Client (`internal/api/client.go`)
-
-```go
-type APIClient struct {
-    baseURL    string
-    apiKey     string
-    httpClient *http.Client
-    circuitBreaker *CircuitBreaker
-}
-
-// HTTP operations with retry logic and circuit breaker
-func (c *APIClient) IngestFiles(ctx context.Context, files []FileMetadata) error
-func (c *APIClient) RegisterAgent(ctx context.Context, agent *AgentInfo) error
-func (c *APIClient) SendHeartbeat(ctx context.Context, status *AgentStatus) error
-func (c *APIClient) GetConfig(ctx context.Context) (*Config, error)
-func (c *APIClient) GetCommands(ctx context.Context) ([]Command, error)
-```
-
 ### SQLite Schema Design
 
 #### MVP Schema (Simplified)
