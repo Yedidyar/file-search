@@ -20,17 +20,19 @@ export default withMermaid(
       // https://vitepress.dev/reference/default-theme-config
       nav: [
         { text: 'Home', link: '/' },
-        { text: 'Quick Start', link: '/quick-start' },
+        { text: 'Project Overview', link: '/README' },
         { text: 'HLD - NestJS Server', link: '/HLD-NestJS-Server' },
         { text: 'HLD - File Scanner Agent', link: '/HLD-Go-File-Scanner' },
       ],
 
       sidebar: [
         {
-          text: 'Getting Started',
+          text: 'Project Overview',
+          items: [{ text: 'Introduction', link: '/README' }],
+        },
+        {
+          text: 'High-Level Design',
           items: [
-            { text: 'Introduction', link: '/' },
-            { text: 'Quick Start', link: '/quick-start' },
             { text: 'HLD - NestJS Server', link: '/HLD-NestJS-Server' },
             { text: 'HLD - File Scanner Agent', link: '/HLD-Go-File-Scanner' },
           ],
