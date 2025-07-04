@@ -21,7 +21,8 @@ export default withMermaid(
       nav: [
         { text: 'Home', link: '/' },
         { text: 'Quick Start', link: '/quick-start' },
-        { text: 'Architecture', link: '/HLD-Go-File-Scanner' },
+        { text: 'HLD - NestJS Server', link: '/HLD-NestJS-Server' },
+        { text: 'HLD - File Scanner Agent', link: '/HLD-Go-File-Scanner' },
       ],
 
       sidebar: [
@@ -30,7 +31,8 @@ export default withMermaid(
           items: [
             { text: 'Introduction', link: '/' },
             { text: 'Quick Start', link: '/quick-start' },
-            { text: 'Architecture Overview', link: '/HLD-Go-File-Scanner' },
+            { text: 'HLD - NestJS Server', link: '/HLD-NestJS-Server' },
+            { text: 'HLD - File Scanner Agent', link: '/HLD-Go-File-Scanner' },
           ],
         },
       ],
