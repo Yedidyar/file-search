@@ -251,10 +251,10 @@ pnpm docs:build             # Build documentation
 
 Comprehensive technical documentation is available:
 
-- **[Quick Start Guide](docs/quick-start.md)** - Getting started with development
-- **[NestJS Server Design](docs/HLD-NestJS-Server.md)** - Backend architecture and implementation
-- **[Go Scanner Agent Design](docs/HLD-Go-File-Scanner.md)** - Planned scanner agent architecture
-- **[API Documentation](http://localhost:3000/api/docs)** - Interactive API documentation (when running)
+- **[NestJS Server Design](./HLD-NestJS-Server.md)** - Backend architecture and implementation
+- **[Go Scanner Agent Design](./HLD-Go-File-Scanner.md)** - Planned scanner agent architecture
+- **[VitePress Documentation](http://localhost:5173/file-search)** - VitePress documentation for the project (when running locally)
+- **[API Documentation](http://localhost:3000/api/docs)** - Interactive API documentation (when running locally)
 
 ## 🔧 Technology Stack
 
