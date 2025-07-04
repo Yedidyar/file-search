@@ -46,5 +46,5 @@ Thumbs.db
 .env*
 
 # VitePress
-docs/.vitepress/dist
-docs/.vitepress/cache
+apps/docs/.vitepress/dist
+apps/docs/.vitepress/cache
