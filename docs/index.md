@@ -8,11 +8,11 @@ hero:
   tagline: Comprehensive file scanning and search system with distributed agents, web interface, and intelligent tagging
   actions:
     - theme: brand
-      text: Get Started
+      text: Project Overview - Quick Start
       link: /quick-start
     - theme: alt
-      text: System Architecture Overview
-      link: /README
+      text: HLD - File Scanner Agent
+      link: /HLD-Go-File-Scanner
 
 features:
   - title: 🔍 Smart Search & Discovery

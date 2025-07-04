@@ -174,8 +174,7 @@ scan_interval: '1h'
 1. **Explore the System**: Use the web interface to search and manage files
 2. **Configure Scan Paths**: Set up directories to be monitored
 3. **Deploy Agents**: Install scanner agents on target file servers
-4. **Review Architecture**: Read the [complete system documentation](./README.md)
-5. **Agent Details**: For advanced agent configuration, see [Go File Scanner Agent HLD](./HLD-Go-File-Scanner.md)
+4. **Agent Details**: For advanced agent configuration, see [Go File Scanner Agent HLD](./HLD-Go-File-Scanner.md)
 
 ## API Documentation
 
@@ -195,6 +194,5 @@ Once the server is running, access the interactive API documentation at:
 
 ### Getting Help
 
-- Check the [system architecture documentation](./README.md)
 - Review [agent-specific documentation](./HLD-Go-File-Scanner.md)
 - Examine server logs for detailed error messages
