@@ -41,7 +41,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
       - uses: nrwl/nx-set-shas@v4
 
       - run: npx nx format:check
