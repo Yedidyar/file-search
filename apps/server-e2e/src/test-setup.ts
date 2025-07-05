@@ -66,7 +66,7 @@ beforeAll(async () => {
 
   // Wait for server to be healthy
   await waitForServer();
-});
+}, 30000);
 
 // Stop the server after all tests
 afterAll(() => {
