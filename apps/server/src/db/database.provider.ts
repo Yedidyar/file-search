@@ -2,14 +2,28 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema';
 import { env } from '../env';
+import { mockDrizzle } from './mock-database.provider';
 
-const pool = new Pool({
-  connectionString: env.DATABASE_URL,
-});
+const DATABASE_PROVIDER = 'DATABASE';
 
-export const db = drizzle({ client: pool, schema: schema });
+const useMockDb = process.env.USE_MOCK_DB === 'true';
 
-export const DATABASE_PROVIDER = 'DATABASE';
+const createDb = () => {
+  if (useMockDb) {
+    console.log('Using mock database for testing');
+    return mockDrizzle;
+  }
+
+  console.log('Connecting to real PostgreSQL database');
+  const pool = new Pool({
+    connectionString: env.DATABASE_URL,
+  });
+  return drizzle(pool, { schema });
+};
+
+export const db = createDb();
+
+export { DATABASE_PROVIDER };
 
 export const databaseProviders = [
   {
