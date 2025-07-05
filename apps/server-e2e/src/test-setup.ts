@@ -16,7 +16,7 @@ let serverProcess: ReturnType<typeof spawn> | null = null;
 export function getEnv(): Env {
   if (!env) {
     env = envSchema.parse({
-      PORT: process.env.PORT || 3001,
+      PORT: 3001,
       HOST: process.env.HOST || 'localhost',
     });
   }
