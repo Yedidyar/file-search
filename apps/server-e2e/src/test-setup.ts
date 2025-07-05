@@ -24,7 +24,7 @@ export function getEnv(): Env {
 }
 
 // Health check function
-async function waitForServer(maxRetries = 10, retryDelay = 500) {
+async function waitForServer(maxRetries = 20, retryDelay = 1500) {
   const { HOST, PORT } = getEnv();
   const url = `http://${HOST}:${PORT}/api`;
 
