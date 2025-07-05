@@ -4,7 +4,7 @@ import { spawn } from 'child_process';
 import { afterAll, beforeAll } from 'vitest';
 
 export const envSchema = z.object({
-  PORT: z.coerce.number().default(3000),
+  PORT: z.coerce.number().default(3001),
   HOST: z.string().default('localhost'),
 });
 
@@ -16,7 +16,7 @@ let serverProcess: ReturnType<typeof spawn> | null = null;
 export function getEnv(): Env {
   if (!env) {
     env = envSchema.parse({
-      PORT: process.env.PORT || 3000,
+      PORT: process.env.PORT || 3001,
       HOST: process.env.HOST || 'localhost',
     });
   }
