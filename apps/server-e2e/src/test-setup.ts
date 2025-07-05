@@ -23,12 +23,21 @@ export function getEnv(): Env {
   return env;
 }
 
-// Health check function
-async function waitForServer(maxRetries = 20, retryDelay = 1500) {
+// Health check function with abort condition
+async function waitForServer(
+  maxRetries = 20,
+  retryDelay = 1500,
+  shouldAbort = () => false,
+) {
   const { HOST, PORT } = getEnv();
   const url = `http://${HOST}:${PORT}/api`;
 
   for (let i = 0; i < maxRetries; i++) {
+    // Check if we should stop trying
+    if (shouldAbort()) {
+      throw new Error('Server failed to start properly');
+    }
+
     try {
       console.log(`Health check attempt ${i + 1}/${maxRetries}...`);
       await axios.get(url);
@@ -47,26 +56,47 @@ beforeAll(async () => {
   const { PORT } = getEnv();
   console.log(`Starting server on port ${PORT}...`);
 
+  // Setup server environment with test configuration
+  const testEnv = {
+    ...process.env,
+    PORT: String(PORT),
+    NODE_ENV: 'test',
+    USE_MOCK_DB: 'true', // Enable mock database mode
+  };
+
+  let serverFailed = false;
+
   serverProcess = spawn(
     'npx',
     ['nx', 'run', 'server:serve', '--port=' + PORT],
     {
       stdio: 'pipe',
-      env: { ...process.env },
+      env: testEnv,
     },
   );
 
   serverProcess.stdout?.on('data', (data) => {
-    console.log(`Server stdout: ${data}`);
+    const output = data.toString();
+    console.log(`Server stdout: ${output}`);
   });
 
   serverProcess.stderr?.on('data', (data) => {
-    console.error(`Server stderr: ${data}`);
+    const error = data.toString();
+    console.error(`Server stderr: ${error}`);
+
+    // Detect server failures
+    if (
+      error.includes('Invalid environment variables') ||
+      error.includes('Error:') ||
+      error.includes('exited with code 1')
+    ) {
+      serverFailed = true;
+    }
   });
 
-  // Wait for server to be healthy
-  await waitForServer();
-}, 30000);
+  // Wait for server to be healthy or detect failure
+  await waitForServer(20, 1500, () => serverFailed);
+}, 60000);
 
 // Stop the server after all tests
 afterAll(() => {
