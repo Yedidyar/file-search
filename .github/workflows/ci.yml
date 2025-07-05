@@ -48,4 +48,4 @@ jobs:
       - run: npx nx affected -t lint test build --skip-nx-cache
         env:
           PORT: 3000
-          HOST: "localhost"
+          HOST: 'localhost'
