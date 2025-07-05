@@ -2,6 +2,7 @@ import z from 'zod';
 import axios from 'axios';
 import { spawn } from 'child_process';
 import { afterAll, beforeAll } from 'vitest';
+import { createServer } from 'net';
 
 export const envSchema = z.object({
   PORT: z.coerce.number().default(3001),
@@ -13,10 +14,28 @@ export type Env = z.infer<typeof envSchema>;
 let env: Env | null = null;
 let serverProcess: ReturnType<typeof spawn> | null = null;
 
-export function getEnv(): Env {
+// Function to find an available port
+function findAvailablePort(startPort = 3001): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.listen(startPort, () => {
+      const port = (server.address() as any)?.port;
+      server.close(() => resolve(port));
+    });
+    server.on('error', () => {
+      // Port is busy, try next one
+      findAvailablePort(startPort + 1)
+        .then(resolve)
+        .catch(reject);
+    });
+  });
+}
+
+export async function getEnv(): Promise<Env> {
   if (!env) {
+    const availablePort = await findAvailablePort(3001);
     env = envSchema.parse({
-      PORT: 3001,
+      PORT: availablePort,
       HOST: process.env.HOST || 'localhost',
     });
   }
@@ -29,7 +48,7 @@ async function waitForServer(
   retryDelay = 1500,
   shouldAbort = () => false,
 ) {
-  const { HOST, PORT } = getEnv();
+  const { HOST, PORT } = await getEnv();
   const url = `http://${HOST}:${PORT}/api`;
 
   for (let i = 0; i < maxRetries; i++) {
@@ -53,7 +72,7 @@ async function waitForServer(
 
 // Start the server before all tests
 beforeAll(async () => {
-  const { PORT } = getEnv();
+  const { PORT } = await getEnv();
   console.log(`Starting server on port ${PORT}...`);
 
   // Setup server environment with test configuration
@@ -107,6 +126,6 @@ afterAll(() => {
   }
 });
 
-export default function setup() {
-  getEnv(); // This will parse and cache the environment variables
+export default async function setup() {
+  await getEnv(); // This will parse and cache the environment variables
 }
