@@ -4,6 +4,9 @@
   "projectType": "application",
   "implicitDependencies": ["server"],
   "targets": {
+    "test": {
+      "dependsOn": ["server:build", "server:serve"]
+    },
     "e2e": {
       "executor": "@nx/jest:jest",
       "outputs": ["{workspaceRoot}/coverage/{e2eProjectRoot}"],
