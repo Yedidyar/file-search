@@ -6,7 +6,7 @@ import { mockDrizzle } from './mock-database.provider';
 
 const DATABASE_PROVIDER = 'DATABASE';
 
-const useMockDb = process.env.USE_MOCK_DB === 'true';
+const useMockDb = !!process.env.USE_MOCK_DB;
 
 const createDb = () => {
   if (useMockDb) {
