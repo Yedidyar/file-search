@@ -1,6 +1,7 @@
 import z from 'zod';
 import axios from 'axios';
 import { beforeAll } from 'vitest';
+import { setTimeout } from 'timers/promises';
 
 export const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
@@ -34,7 +35,7 @@ async function waitForServer(maxRetries = 20, retryDelay = 1500) {
       return true;
     } catch (e) {
       console.log(`Server not ready yet, retrying...`);
-      await new Promise((r) => setTimeout(r, retryDelay));
+      await setTimeout(retryDelay);
     }
   }
   throw new Error(`Server failed to start after ${maxRetries} attempts`);
@@ -44,7 +45,7 @@ async function waitForServer(maxRetries = 20, retryDelay = 1500) {
 beforeAll(async () => {
   console.log(`Checking if server is ready on port ${getEnv().PORT}...`);
   await waitForServer();
-}, 60000);
+}, 30 * 1000);
 
 export default async function setup() {
   getEnv(); // This will parse and cache the environment variables
