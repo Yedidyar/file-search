@@ -45,7 +45,9 @@ export const setup = async () => {
     console.time('global-cleanup');
 
     if (process.env.CI) {
-      await dockerCompose.down();
+      await dockerCompose.down({
+        cwd: path.resolve(__dirname),
+      });
     } else {
       if (Math.ceil(Math.random() * 10) === 10) {
         await testDb.delete(schema.scanPathIgnores);
