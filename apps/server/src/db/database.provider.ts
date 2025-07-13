@@ -3,13 +3,18 @@ import { Pool } from 'pg';
 import * as schema from './schema';
 import { env } from '../env';
 
-const pool = new Pool({
-  connectionString: env.DATABASE_URL,
-});
+const DATABASE_PROVIDER = 'DATABASE';
 
-export const db = drizzle({ client: pool, schema: schema });
+const createDb = () => {
+  const pool = new Pool({
+    connectionString: env.DATABASE_URL,
+  });
+  return drizzle(pool, { schema });
+};
 
-export const DATABASE_PROVIDER = 'DATABASE';
+export const db = createDb();
+
+export { DATABASE_PROVIDER };
 
 export const databaseProviders = [
   {
