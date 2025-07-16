@@ -1,21 +1,26 @@
 {
   "name": "client",
-  "private": true,
-  "type": "module",
-  "scripts": {},
-  "sideEffects": false,
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev:client": "nx serve client",
+    "build:client": "nx build client",
+    "preview:client": "nx preview client"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.12.1",
   "dependencies": {
-    "@react-router/node": "^7.2.0",
-    "@react-router/serve": "^7.2.0",
-    "isbot": "^4.4.0",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "react-router": "7.6.2"
+    "@tanstack/react-router": "^1.127.8",
+    "@tanstack/router-devtools": "^1.127.8",
+    "@tanstack/start": "^1.120.20"
   },
   "devDependencies": {
-    "@react-router/dev": "^7.2.0",
-    "@types/node": "^20.0.0",
-    "@types/react": "19.0.0",
-    "@types/react-dom": "19.0.0"
+    "@tanstack/router-vite-plugin": "^1.127.8",
+    "autoprefixer": "10.4.21",
+    "postcss": "8.5.6",
+    "tailwindcss": "4.1.10"
   }
 }
