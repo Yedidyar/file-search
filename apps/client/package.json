@@ -3,11 +3,6 @@
   "version": "1.0.0",
   "description": "File Search Client Application",
   "main": "index.js",
-  "scripts": {
-    "dev:client": "nx serve client",
-    "build:client": "nx build client",
-    "preview:client": "nx preview client"
-  },
   "keywords": [
     "tanstack",
     "react",
