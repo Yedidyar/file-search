@@ -1,46 +1,32 @@
-/// <reference types='vitest' />
 import { defineConfig } from 'vite';
-import { reactRouter } from '@react-router/dev/vite';
+import { tanstackRouter } from '@tanstack/router-vite-plugin';
+import react from '@vitejs/plugin-react';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
-import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin';
+import path from 'path';
 
-export default defineConfig(() => ({
+export default defineConfig({
   root: __dirname,
-  cacheDir: '../../node_modules/.vite/apps/client',
+  plugins: [
+    nxViteTsPaths(),
+    tanstackRouter({
+      routesDirectory: path.join(__dirname, 'frontend/routes'),
+      generatedRouteTree: path.join(__dirname, 'frontend/routeTree.gen.ts'),
+    }),
+    react(),
+  ],
+  build: {
+    outDir: path.join(__dirname, '../../dist/apps/client'),
+    emptyOutDir: true,
+  },
   server: {
     port: 4200,
     host: 'localhost',
   },
   preview: {
-    port: 4200,
+    port: 4300,
     host: 'localhost',
   },
-  plugins: [
-    !process.env.VITEST && reactRouter(),
-    nxViteTsPaths(),
-    nxCopyAssetsPlugin(['*.md']),
-  ],
-  // Uncomment this if you are using workers.
-  // worker: {
-  //  plugins: [ nxViteTsPaths() ],
-  // },
-  build: {
-    outDir: '../../dist/apps/client',
-    emptyOutDir: true,
-    reportCompressedSize: true,
-    commonjsOptions: {
-      transformMixedEsModules: true,
-    },
+  css: {
+    postcss: './postcss.config.js',
   },
-  test: {
-    watch: false,
-    globals: true,
-    environment: 'jsdom',
-    include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    reporters: ['default'],
-    coverage: {
-      reportsDirectory: '../../coverage/apps/client',
-      provider: 'v8' as const,
-    },
-  },
-}));
+});
